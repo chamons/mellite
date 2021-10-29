@@ -17,7 +17,7 @@ namespace mellite
     {
         static void Main(string[] args)
         {
-            ActionType requestedAction = ActionType.ListFilesToProcess;
+            ActionType requestedAction = ActionType.Process;
             string? path = null;
             LocatorOptions locatorOptions = new LocatorOptions();
 
@@ -52,14 +52,27 @@ namespace mellite
 
             List<string> files = Locator.LocateFiles(path, locatorOptions);
 
-            if (requestedAction == ActionType.ListFilesToProcess)
+            switch (requestedAction)
             {
-                foreach (var file in files)
-                {
-                    Console.WriteLine(file);
-                }
+                case ActionType.ListFilesToProcess:
+                    {
+                        foreach (var file in files)
+                        {
+                            Console.WriteLine(file);
+                        }
+                        break;
+                    }
+                case ActionType.Process:
+                    {
+                        foreach (var file in files)
+                        {
+                            Converter.ConvertFile(file);
+                        }
+                        break;
+                    }
+                case ActionType.Help:
+                    throw new InvalidOperationException(); // Should have been handled above or missed
             }
-
         }
 
         static void ShowHelp(OptionSet os)

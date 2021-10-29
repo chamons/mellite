@@ -1,0 +1,5 @@
+- Look into why tool is stripping initial comments in PlatformAvailability2.cs
+- Actually output the right availability
+- Start on iOS implies Catalyst
+- Start on handing child inherits parent
+- Start on correctly merging with existing
