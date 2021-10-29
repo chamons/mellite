@@ -7,6 +7,7 @@ namespace mellite
     public enum ActionType
     {
         Help,
+        ListFilesToProcess,
         Process
     }
 
@@ -14,12 +15,13 @@ namespace mellite
     {
         static void Main(string[] args)
         {
-            ActionType requestedAction = ActionType.Process;
+            ActionType requestedAction = ActionType.ListFilesToProcess;
             string path = null;
 
             OptionSet os = new OptionSet()
             {
                 { "h|?|help", "Displays the help", v => requestedAction = ActionType.Help },
+                { "l|list-files", "Lists files considered for processing", v => requestedAction = ActionType.ListFilesToProcess },
             };
 
             try
