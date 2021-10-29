@@ -32,5 +32,23 @@ namespace mellite.tests
             Assert.Contains(Path.Combine(src, "bar.cs"), results);
             Assert.Contains(Path.Combine(appkit, "buzz.cs"), results);
         }
+
+        [Fact]
+        public void SkipsIgnoreDirectories()
+        {
+            var cache = Cache.CreateTemporaryDirectory();
+
+            var src = Path.Combine(cache, "src");
+            Directory.CreateDirectory(src);
+            File.WriteAllText(Path.Combine(src, "foo.cs"), "");
+
+            var build = Path.Combine(src, "builds");
+            Directory.CreateDirectory(build);
+            File.WriteAllText(Path.Combine(build, "bar.cs"), "");
+
+            var results = new HashSet<string>(Locator.LocateFiles(src, new LocatorOptions() { Ignore = new List<string> { "build" } }));
+            Assert.Single(results);
+            Assert.Contains(Path.Combine(src, "foo.cs"), results);
+        }
     }
 }
