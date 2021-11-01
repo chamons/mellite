@@ -4,6 +4,6 @@ Mellite is a tool for making large scale changes of metadata on C# source code b
 
 ## Name
 
-[Meta](<https://en.wikipedia.org/wiki/Meta_(mythology)>) was was the daughter of Hoples who became the first wife of Aegeus, king of Athens. Some traditions however name her as Mellite.
+[Meta](<https://en.wikipedia.org/wiki/Meta_(mythology)>) was the daughter of Hoples who became the first wife of Aegeus, king of Athens. Some traditions however name her as Mellite.
 
 It seemed fitting that a tool for mass renaming "Meta"-data is an alternate name for Meta.
