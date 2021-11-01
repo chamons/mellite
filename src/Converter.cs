@@ -24,7 +24,7 @@ namespace mellite
                 .AddReferences(MetadataReference.CreateFromFile(typeof(string).Assembly.Location)).AddSyntaxTrees(tree);
             SemanticModel model = compilation.GetSemanticModel(tree);
 
-            return root!.Accept(new ConverterVisitor(model))!.ToString();
+            return root!.Accept(new ConverterVisitor(model))!.ToFullString();
         }
     }
 

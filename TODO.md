@@ -1,4 +1,3 @@
-- Look into why tool is stripping initial comments in PlatformAvailability2.cs
 - Start on iOS implies Catalyst
 - Start on handing child inherits parent
 - Start on correctly merging with existing
