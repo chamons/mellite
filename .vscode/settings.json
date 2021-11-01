@@ -3,4 +3,15 @@
     "[csharp]": {
         "editor.formatOnSave": true,
     },
+    "cSpell.words": [
+        "BGENERATOR",
+        "cctor",
+        "libc",
+        "mkdir",
+        "tvos",
+        "watchos",
+        "WATCHOS",
+        "XAMCORE",
+        "Xunit"
+    ],
 }

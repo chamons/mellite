@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 using Microsoft.CodeAnalysis;
@@ -38,10 +39,39 @@ namespace mellite
             switch (node.Name.ToString())
             {
                 case "Introduced":
-                    var args = SyntaxFactory.ParseAttributeArgumentList("(\"macos10.0\")");
-                    return SyntaxFactory.Attribute(SyntaxFactory.ParseName("SupportedOSPlatform"), args);
+                    var platform = PlatformArgumentParser.Parse(node.ArgumentList!.Arguments[0].ToString());
+                    if (platform != null)
+                    {
+                        var version = $"{node.ArgumentList!.Arguments[1]}.{node.ArgumentList!.Arguments[2]}";
+                        var args = SyntaxFactory.ParseAttributeArgumentList($"(\"{platform}{version}\")");
+                        return SyntaxFactory.Attribute(SyntaxFactory.ParseName("SupportedOSPlatform"), args);
+                    }
+                    break;
             }
             return node;
+        }
+    }
+
+    public static class PlatformArgumentParser
+    {
+        public static string? Parse(string s)
+        {
+            switch (s)
+            {
+                case "PlatformName.MacOSX":
+                    return "macos";
+                case "PlatformName.iOS":
+                    return "ios";
+                case "PlatformName.TvOS":
+                    return "tvos";
+                case "PlatformName.MacCatalyst":
+                    return "maccatalyst";
+                case "PlatformName.None":
+                case "PlatformName.WatchOS":
+                case "PlatformName.UIKitForMac":
+                default:
+                    return null;
+            }
         }
     }
 }
