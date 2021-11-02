@@ -1,11 +1,12 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text;
+using System.Linq;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Linq;
 
 namespace mellite
 {
@@ -36,6 +37,44 @@ namespace mellite
 
         public AttributeConverterVisitor(SemanticModel semanticModel) => SemanticModel = semanticModel;
 
+        // In this example:
+        //  [Introduced (PlatformName.MacOSX, 10, 0)]
+        //  public void Foo () {{}}
+        //
+        //  [Introduced (PlatformName.iOS, 6, 0)]
+        //  public void Bar () {{}}
+        // Bar has two elements in its leading trivia: Newline and Tab
+        // The newline being between the Foo and Bar declaration
+        // and the Tab being the indent of Bar
+        // We want to copy just the later (Tab) to the synthesized attributes
+        // and put the newline BEFORE the #if if
+        // So split the trivia to everything before and including the last newline and everything else
+        (SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia(AttributeListSyntax node)
+        {
+            var newlines = new SyntaxTriviaList();
+            var rest = new SyntaxTriviaList();
+
+            // XXX - this could be more efficient if we find the split point and bulk copy
+            bool foundSplit = false;
+            foreach (var trivia in node.GetLeadingTrivia().Reverse())
+            {
+                if (trivia.ToFullString() == "\r\n")
+                {
+                    foundSplit = true;
+                }
+
+                if (foundSplit)
+                {
+                    newlines = newlines.Add(trivia);
+                }
+                else
+                {
+                    rest = rest.Add(trivia);
+                }
+            }
+            return (new SyntaxTriviaList(newlines.Reverse()), new SyntaxTriviaList(rest.Reverse()));
+        }
+
         public override SyntaxNode? VisitAttributeList(AttributeListSyntax node)
         {
             // All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
@@ -63,14 +102,25 @@ namespace mellite
 
             if (createdAttributes.Count > 0)
             {
+                // We separate the final line's tabing with any newlines and such in between
+                // And then output both the original and WithTriviaFrom without any trivia
+                // Manually add the 'rest' before each, and the newlines only before the #if !NET
+                var (newlines, rest) = SplitNodeTrivia(node);
+
                 var leading = new List<SyntaxTrivia>();
+                leading.AddRange(newlines);
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#if !NET"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
-                leading.Add(SyntaxFactory.DisabledText(node.ToFullString()));
+
+                // As we're splitting the trivia, only output the tab 'rest' trivia here before the old attribute...
+                leading.AddRange(rest);
+                leading.Add(SyntaxFactory.DisabledText(node.WithoutTrivia().ToFullString()));
+                leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#else"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
-                // Copy existing attribute trivial to get tab'ed over
-                leading.AddRange(node.GetLeadingTrivia());
+
+                // And also here before the new attribute.
+                leading.AddRange(rest);
 
                 var trailing = new List<SyntaxTrivia>();
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
@@ -78,7 +128,8 @@ namespace mellite
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
 
                 var netAttributeElements = SyntaxFactory.SeparatedList(createdAttributes, Enumerable.Repeat(SyntaxFactory.Token(SyntaxKind.CommaToken), Math.Max(createdAttributes.Count - 1, 0)));
-                var netAttribute = SyntaxFactory.AttributeList(netAttributeElements).WithTriviaFrom(node);
+                // Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
+                var netAttribute = SyntaxFactory.AttributeList(netAttributeElements);
 
                 return netAttribute.WithLeadingTrivia(leading).WithTrailingTrivia(trailing);
             }
@@ -95,8 +146,8 @@ namespace mellite
             {
                 var version = $"{node.ArgumentList!.Arguments[1]}.{node.ArgumentList!.Arguments[2]}";
                 var args = SyntaxFactory.ParseAttributeArgumentList($"(\"{platform}{version}\")");
-
-                return SyntaxFactory.Attribute(SyntaxFactory.ParseName("SupportedOSPlatform"), args).WithTriviaFrom(node);
+                // Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
+                return SyntaxFactory.Attribute(SyntaxFactory.ParseName("SupportedOSPlatform"), args);
             }
             return null;
         }

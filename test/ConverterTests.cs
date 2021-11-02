@@ -43,9 +43,6 @@ namespace binding
 
         void TestConversion(string original, string expected)
         {
-            Console.WriteLine(original);
-            Console.WriteLine(expected);
-            Console.WriteLine(Converter.ConvertText(original));
             Assert.Equal(expected, Converter.ConvertText(original));
         }
 
@@ -95,6 +92,52 @@ namespace binding
         [SupportedOSPlatform(""macos10.0"")]
 #endif
         public void Foo () {{}}
+
+#if !NET
+        [Introduced (PlatformName.iOS, 6, 0)]
+#else
+        [SupportedOSPlatform(""ios6.0"")]
+#endif
+        public void Bar () {{}}
+    }}
+}}
+");
+            // CRLF CRLF TAB CRLF CRLF
+            TestConversion(
+            $@"using System;
+using ObjCRuntime;
+
+namespace binding
+{{
+    public partial class Class1
+    {{
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+        public void Foo () {{}}
+
+
+
+
+        [Introduced (PlatformName.iOS, 6, 0)]
+        public void Bar () {{}}
+    }}
+}}
+",
+            $@"using System;
+using ObjCRuntime;
+
+namespace binding
+{{
+    public partial class Class1
+    {{
+#if !NET
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+#else
+        [SupportedOSPlatform(""macos10.0"")]
+#endif
+        public void Foo () {{}}
+
+
+
 
 #if !NET
         [Introduced (PlatformName.iOS, 6, 0)]
