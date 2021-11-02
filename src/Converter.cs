@@ -65,17 +65,17 @@ namespace mellite
             {
                 var leading = new List<SyntaxTrivia>();
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#if !NET"));
-                leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\n"));
+                leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 leading.Add(SyntaxFactory.DisabledText(node.ToFullString()));
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#else"));
-                leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\n"));
+                leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 // Copy existing attribute trivial to get tab'ed over
                 leading.AddRange(node.GetLeadingTrivia());
 
                 var trailing = new List<SyntaxTrivia>();
-                trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\n"));
+                trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("#endif"));
-                trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\n"));
+                trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
 
                 var netAttributeElements = SyntaxFactory.SeparatedList(createdAttributes, Enumerable.Repeat(SyntaxFactory.Token(SyntaxKind.CommaToken), Math.Max(createdAttributes.Count - 1, 0)));
                 var netAttribute = SyntaxFactory.AttributeList(netAttributeElements).WithTriviaFrom(node);

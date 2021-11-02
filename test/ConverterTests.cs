@@ -41,18 +41,70 @@ namespace binding
 ";
         }
 
-        void TestConversion(string xamarinAttribute, string newAttribute)
+        void TestConversion(string original, string expected)
         {
-            string result = Converter.ConvertText(GetTestProgram(xamarinAttribute));
-            Assert.Equal(GetTestProgramWithConditional(xamarinAttribute, newAttribute), result);
+            Console.WriteLine(original);
+            Console.WriteLine(expected);
+            Console.WriteLine(Converter.ConvertText(original));
+            Assert.Equal(expected, Converter.ConvertText(original));
+        }
+
+        void TestAttributeConversion(string xamarinAttribute, string newAttribute)
+        {
+            TestConversion(GetTestProgram(xamarinAttribute), GetTestProgramWithConditional(xamarinAttribute, newAttribute));
         }
 
         [Fact]
         public void SingleAttributeOnClass()
         {
-            TestConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
-            TestConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
-            TestConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0""),SupportedOSPlatform(""macos10.0"")]");
+            TestAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
+            TestAttributeConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
+            TestAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0""),SupportedOSPlatform(""macos10.0"")]");
+        }
+
+
+        [Fact]
+        public void NewLinesBetweenElements()
+        {
+            TestConversion(
+            $@"using System;
+using ObjCRuntime;
+
+namespace binding
+{{
+    public partial class Class1
+    {{
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+        public void Foo () {{}}
+
+        [Introduced (PlatformName.iOS, 6, 0)]
+        public void Bar () {{}}
+    }}
+}}
+",
+            $@"using System;
+using ObjCRuntime;
+
+namespace binding
+{{
+    public partial class Class1
+    {{
+#if !NET
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+#else
+        [SupportedOSPlatform(""macos10.0"")]
+#endif
+        public void Foo () {{}}
+
+#if !NET
+        [Introduced (PlatformName.iOS, 6, 0)]
+#else
+        [SupportedOSPlatform(""ios6.0"")]
+#endif
+        public void Bar () {{}}
+    }}
+}}
+");
         }
 
         [Theory]
