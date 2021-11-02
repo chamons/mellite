@@ -1,3 +1,4 @@
-- Start on iOS implies Catalyst
-- Start on handing child inherits parent
-- Start on correctly merging with existing
+- #if around both
+- iOS implies Catalyst
+- Handing child inherits parent
+- Correctly merging with existing

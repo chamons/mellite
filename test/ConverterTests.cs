@@ -9,14 +9,30 @@ namespace mellite.tests
 {
     public class ConverterTests
     {
+        string GetTestProgramWithConditional(string xamarinAttribute, string newAttribute)
+        {
+            string attribute = $@"#if !NET
+    {xamarinAttribute}
+#else
+    {newAttribute}
+#endif";
+            return GetTestProgramBase(attribute);
+
+        }
+
         string GetTestProgram(string attribute)
+        {
+            return GetTestProgramBase("    " + attribute);
+        }
+
+        string GetTestProgramBase(string attributeCode)
         {
             return $@"using System;
 using ObjCRuntime;
 
 namespace binding
 {{
-    {attribute}
+{attributeCode}
     public partial class Class1
     {{
         public void Foo () {{}}
@@ -25,14 +41,18 @@ namespace binding
 ";
         }
 
+        void TestConversion(string xamarinAttribute, string newAttribute)
+        {
+            string result = Converter.ConvertText(GetTestProgram(xamarinAttribute));
+            Assert.Equal(GetTestProgramWithConditional(xamarinAttribute, newAttribute), result);
+        }
+
         [Fact]
         public void SingleAttributeOnClass()
         {
-            string result = Converter.ConvertText(GetTestProgram("[Introduced (PlatformName.MacOSX, 10, 0)]"));
-            Assert.Equal(GetTestProgram("[SupportedOSPlatform(\"macos10.0\")]"), result);
-
-            result = Converter.ConvertText(GetTestProgram("[Introduced (PlatformName.iOS, 6, 0)]"));
-            Assert.Equal(GetTestProgram("[SupportedOSPlatform(\"ios6.0\")]"), result);
+            TestConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
+            TestConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
+            TestConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0""),SupportedOSPlatform(""macos10.0"")]");
         }
 
         [Theory]
