@@ -49,7 +49,7 @@ namespace mellite
         // We want to copy just the later (Tab) to the synthesized attributes
         // and put the newline BEFORE the #if if
         // So split the trivia to everything before and including the last newline and everything else
-        (SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia(AttributeSyntax node)
+        (SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia(SyntaxNode node)
         {
             var newlines = new SyntaxTriviaList();
             var rest = new SyntaxTriviaList();
@@ -79,19 +79,20 @@ namespace mellite
         {
             // All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
             var createdAttributes = new List<AttributeSyntax>();
+            var exitedAttributes = new List<AttributeSyntax>();
 
             // Need to process trivia from first element to get proper tabbing and newline before...
             SyntaxTriviaList? newlineTrivia = null;
             SyntaxTriviaList? indentTrivia = null;
             foreach (var attributeList in member.AttributeLists)
             {
+                if (newlineTrivia == null)
+                {
+                    (newlineTrivia, indentTrivia) = SplitNodeTrivia(attributeList);
+                }
+
                 foreach (var attribute in attributeList.Attributes)
                 {
-                    if (newlineTrivia == null)
-                    {
-                        (newlineTrivia, indentTrivia) = SplitNodeTrivia(attribute);
-                    }
-
                     switch (attribute.Name.ToString())
                     {
                         case "Introduced":
@@ -99,6 +100,7 @@ namespace mellite
                             if (newNode != null)
                             {
                                 createdAttributes.Add(newNode);
+                                exitedAttributes.Add(attribute);
                             }
                             break;
                         default:
@@ -125,26 +127,34 @@ namespace mellite
                 leading.AddRange(newlineTrivia);
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#if !NET"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
-                foreach (var attribute in createdAttributes)
+                foreach (var attribute in exitedAttributes)
                 {
-                    leading.Add(SyntaxFactory.DisabledText(CreateAttributeList(attribute.WithoutTrivia()).ToFullString()));
+                    leading.Add(SyntaxFactory.DisabledText(CreateAttributeList(attribute).WithLeadingTrivia(indentTrivia).ToFullString()));
                     leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 }
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#else"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
-
-                finalAttributes.Add(CreateAttributeList(createdAttributes.First()).WithLeadingTrivia(leading));
-                foreach (var middleAttribute in createdAttributes.Skip(1).SkipLast(1))
-                {
-                    finalAttributes.Add(CreateAttributeList(middleAttribute));
-                }
+                leading.AddRange(indentTrivia);
 
                 var trailing = new List<SyntaxTrivia>();
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("#endif"));
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
 
-                finalAttributes.Add(CreateAttributeList(createdAttributes.Last()).WithTrailingTrivia(trailing));
+                for (int i = 0; i < createdAttributes.Count; i += 1)
+                {
+                    var finalAttribute = CreateAttributeList(createdAttributes[i]).WithLeadingTrivia(indentTrivia).WithTrailingTrivia(SyntaxFactory.ParseTrailingTrivia("\r\n"));
+                    if (i == 0)
+                    {
+                        finalAttribute = finalAttribute.WithLeadingTrivia(leading);
+                    }
+                    if (i == createdAttributes.Count - 1)
+                    {
+                        finalAttribute = finalAttribute.WithTrailingTrivia(trailing);
+                    }
+                    finalAttributes.Add(finalAttribute);
+                }
+
                 SyntaxList<AttributeListSyntax> finalAttributeLists = new SyntaxList<AttributeListSyntax>(finalAttributes);
                 return member.WithAttributeLists(finalAttributeLists);
             }

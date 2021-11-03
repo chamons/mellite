@@ -9,60 +9,85 @@ namespace mellite.tests
 {
     public class ConverterTests
     {
-        string GetTestProgramWithConditional(string xamarinAttribute, string newAttribute)
+        string GetConditionalAttributeBlock(string xamarinAttribute, string newAttribute, int spaceCount)
         {
-            string attribute = $@"#if !NET
-    {xamarinAttribute}
+            var spaces = new String(' ', spaceCount);
+            return $@"#if !NET
+{spaces}{xamarinAttribute}
 #else
-    {newAttribute}
+{spaces}{newAttribute}
 #endif";
-            return GetTestProgramBase(attribute);
 
         }
 
-        string GetTestProgram(string attribute)
-        {
-            return GetTestProgramBase("    " + attribute);
-        }
-
-        string GetTestProgramBase(string attributeCode)
-        {
-            return $@"using System;
+        string GetTestProgram(string body) => $@"using System;
 using ObjCRuntime;
 
 namespace binding
 {{
-{attributeCode}
-    public partial class Class1
-    {{
-        public void Foo () {{}}
-    }}
+{body}
 }}
 ";
-        }
 
         void TestConversion(string original, string expected)
         {
+#if true
             Console.WriteLine(original);
             Console.WriteLine(Converter.ConvertText(original));
+            Console.WriteLine(expected);
+#endif
+
             Assert.Equal(expected, Converter.ConvertText(original));
         }
 
-        void TestAttributeConversion(string xamarinAttribute, string newAttribute)
+        void TestClassAttributeConversion(string xamarinAttribute, string newAttribute)
         {
-            TestConversion(GetTestProgram(xamarinAttribute), GetTestProgramWithConditional(xamarinAttribute, newAttribute));
+            string body = @"    {0}
+    public partial class Class1
+    {{
+        public void Foo () {{}}
+    }}";
+            var original = GetTestProgram(string.Format(body, "    " + xamarinAttribute));
+            var expected = GetTestProgram(string.Format(body, GetConditionalAttributeBlock(xamarinAttribute, newAttribute, 4)));
+            TestConversion(original, expected);
         }
 
-        [Fact]
+        //[Fact]
         public void SingleAttributeOnClass()
         {
-            TestAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
-            TestAttributeConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
-            TestAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0""),SupportedOSPlatform(""macos10.0"")]");
+            TestClassAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
+            TestClassAttributeConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
+            TestClassAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
+    [SupportedOSPlatform(""macos10.0"")]");
         }
 
+        void TestMethodAttributeConversion(string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
+        {
+            string body = @"    public partial class Class1
+    {{
+{0}
+        public void Foo () {{}}
+
+        public void Bar () {{}}
+    }}";
+            xamarinAttributeAfterConvert ??= xamarinAttribute;
+            var original = GetTestProgram(string.Format(body, "        " + xamarinAttribute));
+            var expected = GetTestProgram(string.Format(body, GetConditionalAttributeBlock(xamarinAttributeAfterConvert, newAttribute, 8)));
+            TestConversion(original, expected);
+        }
 
         [Fact]
+        public void SingleAttributeOnMethod()
+        {
+            TestMethodAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
+            TestMethodAttributeConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
+            TestMethodAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
+        [SupportedOSPlatform(""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+        [Introduced (PlatformName.MacOSX, 10, 0)]");
+            // TODO - Test 3 attributes
+        }
+
+        // [Fact]
         public void NewLinesBetweenElements()
         {
             TestConversion(
