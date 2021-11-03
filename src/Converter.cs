@@ -49,7 +49,7 @@ namespace mellite
         // We want to copy just the later (Tab) to the synthesized attributes
         // and put the newline BEFORE the #if if
         // So split the trivia to everything before and including the last newline and everything else
-        (SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia(AttributeListSyntax node)
+        (SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia(AttributeSyntax node)
         {
             var newlines = new SyntaxTriviaList();
             var rest = new SyntaxTriviaList();
@@ -75,68 +75,96 @@ namespace mellite
             return (new SyntaxTriviaList(newlines.Reverse()), new SyntaxTriviaList(rest.Reverse()));
         }
 
-        public override SyntaxNode? VisitAttributeList(AttributeListSyntax node)
+        public MemberDeclarationSyntax Apply(MemberDeclarationSyntax member)
         {
             // All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
             var createdAttributes = new List<AttributeSyntax>();
 
-            foreach (var attribute in node.Attributes)
+            // Need to process trivia from first element to get proper tabbing and newline before...
+            SyntaxTriviaList? newlineTrivia = null;
+            SyntaxTriviaList? indentTrivia = null;
+            foreach (var attributeList in member.AttributeLists)
             {
-                switch (attribute.Name.ToString())
+                foreach (var attribute in attributeList.Attributes)
                 {
-                    case "Introduced":
-                        var newNode = ProcessAvailabilityNode(attribute);
-                        if (newNode != null)
-                        {
-                            createdAttributes.Add(newNode);
-                        }
-                        break;
+                    if (newlineTrivia == null)
+                    {
+                        (newlineTrivia, indentTrivia) = SplitNodeTrivia(attribute);
+                    }
+
+                    switch (attribute.Name.ToString())
+                    {
+                        case "Introduced":
+                            var newNode = ProcessAvailabilityNode(attribute);
+                            if (newNode != null)
+                            {
+                                createdAttributes.Add(newNode);
+                            }
+                            break;
+                        default:
+                            // For now...
+                            throw new NotImplementedException($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.ToFullString()}'");
+                    }
                 }
             }
 
-            // Assume every attribute in a list is availability or none. Will need to extend if not true assumption in our code base....
-            if (createdAttributes.Count != 0 && createdAttributes.Count != node.Attributes.Count)
+            if (newlineTrivia != null && indentTrivia != null)
             {
-                throw new NotImplementedException($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{node.ToFullString()}'");
-            }
+                List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax>();
 
-            if (createdAttributes.Count > 0)
-            {
-                // We separate the final line's tabing with any newlines and such in between
-                // And then output both the original and WithTriviaFrom without any trivia
-                // Manually add the 'rest' before each, and the newlines only before the #if !NET
-                var (newlines, rest) = SplitNodeTrivia(node);
-
+                // We want to generate:
+                // #if !NET
+                // EXISTING_ATTRIBUTES
+                // #else
+                // CONVERTED_ATTRIBUTES
+                // #endif
+                // The #if, all EXISTING_ATTRIBUTES, and the #else are all leading trivia of
+                // the first CONVERTED_ATTRIBUTE, and the #endif is trailing of the last one
+                // Each attribute will need indentTrivia to be tabbed over enough
                 var leading = new List<SyntaxTrivia>();
-                leading.AddRange(newlines);
+                leading.AddRange(newlineTrivia);
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#if !NET"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
-
-                // As we're splitting the trivia, only output the tab 'rest' trivia here before the old attribute...
-                leading.AddRange(rest);
-                leading.Add(SyntaxFactory.DisabledText(node.WithoutTrivia().ToFullString()));
-                leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
+                foreach (var attribute in createdAttributes)
+                {
+                    leading.Add(SyntaxFactory.DisabledText(CreateAttributeList(attribute.WithoutTrivia()).ToFullString()));
+                    leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
+                }
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#else"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
 
-                // And also here before the new attribute.
-                leading.AddRange(rest);
+                finalAttributes.Add(CreateAttributeList(createdAttributes.First()).WithLeadingTrivia(leading));
+                foreach (var middleAttribute in createdAttributes.Skip(1).SkipLast(1))
+                {
+                    finalAttributes.Add(CreateAttributeList(middleAttribute));
+                }
 
                 var trailing = new List<SyntaxTrivia>();
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("#endif"));
                 trailing.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
 
-                var netAttributeElements = SyntaxFactory.SeparatedList(createdAttributes, Enumerable.Repeat(SyntaxFactory.Token(SyntaxKind.CommaToken), Math.Max(createdAttributes.Count - 1, 0)));
-                // Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
-                var netAttribute = SyntaxFactory.AttributeList(netAttributeElements);
+                finalAttributes.Add(CreateAttributeList(createdAttributes.Last()).WithTrailingTrivia(trailing));
+                SyntaxList<AttributeListSyntax> finalAttributeLists = new SyntaxList<AttributeListSyntax>(finalAttributes);
+                return member.WithAttributeLists(finalAttributeLists);
+            }
+            return member;
+        }
 
-                return netAttribute.WithLeadingTrivia(leading).WithTrailingTrivia(trailing);
-            }
-            else
-            {
-                return node;
-            }
+        AttributeListSyntax CreateAttributeList(AttributeSyntax createdAttribute)
+        {
+            var netAttributeElements = SyntaxFactory.SeparatedList(new List<AttributeSyntax>() { createdAttribute }, Enumerable.Repeat(SyntaxFactory.Token(SyntaxKind.CommaToken), 0));
+            return SyntaxFactory.AttributeList(netAttributeElements);
+        }
+
+        public override SyntaxNode? VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+        {
+            return Apply(node);
+        }
+
+        public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
+        {
+            return Apply(node);
         }
 
         AttributeSyntax? ProcessAvailabilityNode(AttributeSyntax node)

@@ -43,6 +43,8 @@ namespace binding
 
         void TestConversion(string original, string expected)
         {
+            Console.WriteLine(original);
+            Console.WriteLine(Converter.ConvertText(original));
             Assert.Equal(expected, Converter.ConvertText(original));
         }
 
@@ -76,6 +78,11 @@ namespace binding
 
         [Introduced (PlatformName.iOS, 6, 0)]
         public void Bar () {{}}
+
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+        public void Buzz () {{}}
+
+        public void FooBar () {{}}
     }}
 }}
 ",
@@ -99,6 +106,15 @@ namespace binding
         [SupportedOSPlatform(""ios6.0"")]
 #endif
         public void Bar () {{}}
+
+#if !NET
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+#else
+        [SupportedOSPlatform(""macos10.0"")]
+#endif
+        public void Buzz () {{}}
+
+        public void FooBar () {{}}
     }}
 }}
 ");
