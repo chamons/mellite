@@ -1,6 +1,4 @@
-- #if around both
-  - Test 3 attributes on members
-  - Fix class attributes and test w\ 3
+- Handle NoMac, \* other stuff than just introduced
 - iOS implies Catalyst
 - Handing child inherits parent
 - Correctly merging with existing

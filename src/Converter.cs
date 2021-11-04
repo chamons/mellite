@@ -177,6 +177,11 @@ namespace mellite
             return Apply(node);
         }
 
+        public override SyntaxNode? VisitClassDeclaration(ClassDeclarationSyntax node)
+        {
+            return Apply(node);
+        }
+
         AttributeSyntax? ProcessAvailabilityNode(AttributeSyntax node)
         {
             var platform = PlatformArgumentParser.Parse(node.ArgumentList!.Arguments[0].ToString());

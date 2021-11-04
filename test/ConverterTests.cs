@@ -40,25 +40,37 @@ namespace binding
             Assert.Equal(expected, Converter.ConvertText(original));
         }
 
-        void TestClassAttributeConversion(string xamarinAttribute, string newAttribute)
+        void TestClassAttributeConversion(string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
         {
-            string body = @"    {0}
+            string body = @"{0}
     public partial class Class1
     {{
         public void Foo () {{}}
     }}";
+            xamarinAttributeAfterConvert ??= xamarinAttribute;
             var original = GetTestProgram(string.Format(body, "    " + xamarinAttribute));
-            var expected = GetTestProgram(string.Format(body, GetConditionalAttributeBlock(xamarinAttribute, newAttribute, 4)));
+            var expected = GetTestProgram(string.Format(body, GetConditionalAttributeBlock(xamarinAttributeAfterConvert, newAttribute, 4)));
             TestConversion(original, expected);
         }
 
-        //[Fact]
+        [Fact]
         public void SingleAttributeOnClass()
         {
             TestClassAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
             TestClassAttributeConversion("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
             TestClassAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-    [SupportedOSPlatform(""macos10.0"")]");
+    [SupportedOSPlatform(""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+    [Introduced (PlatformName.MacOSX, 10, 0)]");
+            TestClassAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0), Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
+    [SupportedOSPlatform(""macos10.0"")]
+    [SupportedOSPlatform(""maccatalyst10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+    [Introduced (PlatformName.MacOSX, 10, 0)]
+    [Introduced (PlatformName.MacCatalyst, 10, 0)]");
+            TestClassAttributeConversion(@"[Introduced (PlatformName.iOS, 6, 0)]
+    [Introduced (PlatformName.MacOSX, 10, 0)]
+    [Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
+    [SupportedOSPlatform(""macos10.0"")]
+    [SupportedOSPlatform(""maccatalyst10.0"")]");
         }
 
         void TestMethodAttributeConversion(string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
@@ -76,7 +88,7 @@ namespace binding
             TestConversion(original, expected);
         }
 
-        [Fact]
+        //[Fact]
         public void SingleAttributeOnMethod()
         {
             TestMethodAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
@@ -84,7 +96,16 @@ namespace binding
             TestMethodAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
         [SupportedOSPlatform(""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
         [Introduced (PlatformName.MacOSX, 10, 0)]");
-            // TODO - Test 3 attributes
+            TestMethodAttributeConversion("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0), Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
+        [SupportedOSPlatform(""macos10.0"")]
+        [SupportedOSPlatform(""maccatalyst10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+        [Introduced (PlatformName.MacCatalyst, 10, 0)]");
+            TestMethodAttributeConversion(@"[Introduced (PlatformName.iOS, 6, 0)]
+        [Introduced (PlatformName.MacOSX, 10, 0)]
+        [Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
+        [SupportedOSPlatform(""macos10.0"")]
+        [SupportedOSPlatform(""maccatalyst10.0"")]");
         }
 
         // [Fact]
