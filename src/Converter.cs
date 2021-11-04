@@ -79,7 +79,7 @@ namespace mellite
         {
             // All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
             var createdAttributes = new List<AttributeSyntax>();
-            var exitedAttributes = new List<AttributeSyntax>();
+            var existingAttributes = new List<AttributeSyntax>();
 
             // Need to process trivia from first element to get proper tabbing and newline before...
             SyntaxTriviaList? newlineTrivia = null;
@@ -100,12 +100,14 @@ namespace mellite
                             if (newNode != null)
                             {
                                 createdAttributes.Add(newNode);
-                                exitedAttributes.Add(attribute);
+                                existingAttributes.Add(attribute);
                             }
                             break;
+                        case "AttributeUsage":
+                            // XXX - For now...
+                            break;
                         default:
-                            // For now...
-                            throw new NotImplementedException($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.ToFullString()}'");
+                            throw new NotImplementedException($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.Name}'");
                     }
                 }
             }
@@ -127,7 +129,7 @@ namespace mellite
                 leading.AddRange(newlineTrivia);
                 leading.AddRange(SyntaxFactory.ParseLeadingTrivia("#if !NET"));
                 leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
-                foreach (var attribute in exitedAttributes)
+                foreach (var attribute in existingAttributes)
                 {
                     leading.Add(SyntaxFactory.DisabledText(CreateAttributeList(attribute).WithLeadingTrivia(indentTrivia).ToFullString()));
                     leading.AddRange(SyntaxFactory.ParseTrailingTrivia("\r\n"));
@@ -179,7 +181,12 @@ namespace mellite
 
         public override SyntaxNode? VisitClassDeclaration(ClassDeclarationSyntax node)
         {
-            return Apply(node);
+            var processedNode = (ClassDeclarationSyntax?)base.VisitClassDeclaration(node);
+            if (processedNode != null)
+            {
+                return Apply(processedNode);
+            }
+            return null;
         }
 
         AttributeSyntax? ProcessAvailabilityNode(AttributeSyntax node)

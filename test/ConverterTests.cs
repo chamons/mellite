@@ -1,7 +1,4 @@
 using System;
-using System.IO;
-using System.Collections.Generic;
-using mellite;
 
 using Xunit;
 
@@ -88,7 +85,7 @@ namespace binding
             TestConversion(original, expected);
         }
 
-        //[Fact]
+        [Fact]
         public void SingleAttributeOnMethod()
         {
             TestMethodAttributeConversion("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
@@ -108,108 +105,108 @@ namespace binding
         [SupportedOSPlatform(""maccatalyst10.0"")]");
         }
 
-        // [Fact]
+        [Fact]
         public void NewLinesBetweenElements()
         {
-            TestConversion(
-            $@"using System;
-using ObjCRuntime;
+            //             TestConversion(
+            //             $@"using System;
+            // using ObjCRuntime;
 
-namespace binding
-{{
-    public partial class Class1
-    {{
-        [Introduced (PlatformName.MacOSX, 10, 0)]
-        public void Foo () {{}}
+            // namespace binding
+            // {{
+            //     public partial class Class1
+            //     {{
+            //         [Introduced (PlatformName.MacOSX, 10, 0)]
+            //         public void Foo () {{}}
 
-        [Introduced (PlatformName.iOS, 6, 0)]
-        public void Bar () {{}}
+            //         [Introduced (PlatformName.iOS, 6, 0)]
+            //         public void Bar () {{}}
 
-        [Introduced (PlatformName.MacOSX, 10, 0)]
-        public void Buzz () {{}}
+            //         [Introduced (PlatformName.MacOSX, 10, 0)]
+            //         public void Buzz () {{}}
 
-        public void FooBar () {{}}
-    }}
-}}
-",
-            $@"using System;
-using ObjCRuntime;
+            //         public void FooBar () {{}}
+            //     }}
+            // }}
+            // ",
+            //             $@"using System;
+            // using ObjCRuntime;
 
-namespace binding
-{{
-    public partial class Class1
-    {{
-#if !NET
-        [Introduced (PlatformName.MacOSX, 10, 0)]
-#else
-        [SupportedOSPlatform(""macos10.0"")]
-#endif
-        public void Foo () {{}}
+            // namespace binding
+            // {{
+            //     public partial class Class1
+            //     {{
+            // #if !NET
+            //         [Introduced (PlatformName.MacOSX, 10, 0)]
+            // #else
+            //         [SupportedOSPlatform(""macos10.0"")]
+            // #endif
+            //         public void Foo () {{}}
 
-#if !NET
-        [Introduced (PlatformName.iOS, 6, 0)]
-#else
-        [SupportedOSPlatform(""ios6.0"")]
-#endif
-        public void Bar () {{}}
+            // #if !NET
+            //         [Introduced (PlatformName.iOS, 6, 0)]
+            // #else
+            //         [SupportedOSPlatform(""ios6.0"")]
+            // #endif
+            //         public void Bar () {{}}
 
-#if !NET
-        [Introduced (PlatformName.MacOSX, 10, 0)]
-#else
-        [SupportedOSPlatform(""macos10.0"")]
-#endif
-        public void Buzz () {{}}
+            // #if !NET
+            //         [Introduced (PlatformName.MacOSX, 10, 0)]
+            // #else
+            //         [SupportedOSPlatform(""macos10.0"")]
+            // #endif
+            //         public void Buzz () {{}}
 
-        public void FooBar () {{}}
-    }}
-}}
-");
+            //         public void FooBar () {{}}
+            //     }}
+            // }}
+            // ");
             // CRLF CRLF TAB CRLF CRLF
             TestConversion(
             $@"using System;
-using ObjCRuntime;
+            using ObjCRuntime;
 
-namespace binding
-{{
-    public partial class Class1
-    {{
-        [Introduced (PlatformName.MacOSX, 10, 0)]
-        public void Foo () {{}}
-
-
+            namespace binding
+            {{
+                public partial class Class1
+                {{
+                    [Introduced (PlatformName.MacOSX, 10, 0)]
+                    public void Foo () {{}}
 
 
-        [Introduced (PlatformName.iOS, 6, 0)]
-        public void Bar () {{}}
-    }}
-}}
-",
+
+
+                    [Introduced (PlatformName.iOS, 6, 0)]
+                    public void Bar () {{}}
+                }}
+            }}
+            ",
             $@"using System;
-using ObjCRuntime;
+            using ObjCRuntime;
 
-namespace binding
-{{
-    public partial class Class1
-    {{
+            namespace binding
+            {{
+                public partial class Class1
+                {{
 #if !NET
-        [Introduced (PlatformName.MacOSX, 10, 0)]
+                    [Introduced (PlatformName.MacOSX, 10, 0)]
 #else
-        [SupportedOSPlatform(""macos10.0"")]
+                    [SupportedOSPlatform(""macos10.0"")]
 #endif
-        public void Foo () {{}}
+                    public void Foo () {{}}
 
 
 
 
 #if !NET
-        [Introduced (PlatformName.iOS, 6, 0)]
+                    [Introduced (PlatformName.iOS, 6, 0)]
 #else
-        [SupportedOSPlatform(""ios6.0"")]
+                    [SupportedOSPlatform(""ios6.0"")]
 #endif
-        public void Bar () {{}}
-    }}
-}}
-");
+                    public void Bar () {{}}
+                }}
+            }}
+            ");
         }
 
         [Theory]
