@@ -83,14 +83,24 @@ namespace mellite {
 
 				foreach (var attribute in attributeList.Attributes) {
 					switch (attribute.Name.ToString ()) {
-					case "Introduced":
-						var newNode = ProcessAvailabilityNode (attribute);
+					case "Introduced": {
+						var newNode = ProcessSupportedAvailabilityNode (attribute);
 						if (newNode != null) {
 							createdAttributes.Add (newNode);
 							existingAttributes.Add (attribute);
 						}
 						break;
+					}
+					case "Deprecated": {
+						foreach (var newNode in ProcessDeprecatedNode (attribute)) {
+							createdAttributes.Add (newNode);
+						}
+						existingAttributes.Add (attribute);
+						break;
+					}
 					case "AttributeUsage":
+					case "NoMac":
+					case "NoiOS":
 						// XXX - For now...
 						break;
 					default:
@@ -171,7 +181,7 @@ namespace mellite {
 			return null;
 		}
 
-		AttributeSyntax? ProcessAvailabilityNode (AttributeSyntax node)
+		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)
 		{
 			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
 			if (platform != null) {
@@ -181,6 +191,40 @@ namespace mellite {
 				return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("SupportedOSPlatform"), args);
 			}
 			return null;
+		}
+
+		AttributeSyntax? ProcessUnsupportedAvailabilityNode (AttributeSyntax node)
+		{
+			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+			if (platform != null) {
+				if (node.ArgumentList.Arguments.Count > 0) {
+					var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
+					// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
+					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
+				} else {
+					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}\")");
+					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
+				}
+			}
+			return null;
+		}
+
+		// Add a bunch of #if blocks per platform here...
+		List<AttributeSyntax> ProcessDeprecatedNode (AttributeSyntax node)
+		{
+			var returnNodes = new List<AttributeSyntax> ();
+			var unsupported = ProcessUnsupportedAvailabilityNode (node);
+			if (unsupported != null) {
+				returnNodes.Add (unsupported);
+				var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+				var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+				// Skip 10 - sizeof("message: \"") and last "
+				var message = node.ArgumentList!.Arguments.Count > 3 ? $"{node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
+				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version} {message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
+				returnNodes.Add (SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args));
+			}
+			return returnNodes;
 		}
 	}
 

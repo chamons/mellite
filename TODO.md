@@ -1,4 +1,5 @@
 - Handle NoMac, \* other stuff than just introduced
+- Ignore (but keep) non-relevant attributes
 - iOS implies Catalyst
 - Handing child inherits parent
 - Correctly merging with existing

@@ -104,6 +104,15 @@ namespace binding
 		}
 
 		[Fact]
+		public void TestAllAttributeKinds ()
+		{
+			TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)][Deprecated (PlatformName.MacOSX, 11, 0)][Obsoleted (PlatformName.MacOSX, 11, 0)][Unavailable (PlatformName.iOS)]", "");
+			TestMethodAttributeConversion ("[Mac (11, 0)][iOS (11, 0)][TV (10, 0)][MacCatalyst(11, 0)]", "");
+			TestMethodAttributeConversion ("[NoMac][NoiOS][NoTV][NoMacCatalyst]", "");
+			//TestMethodAttributeConversion ("[Watch (11, 0)][NoWatch]", "");
+		}
+
+		[Fact]
 		public void NewLinesBetweenElements ()
 		{
 			TestConversion (
