@@ -7,10 +7,10 @@ namespace mellite.tests {
 		string GetConditionalAttributeBlock (string xamarinAttribute, string newAttribute, int spaceCount)
 		{
 			var spaces = new String (' ', spaceCount);
-			return $@"#if !NET
-{spaces}{xamarinAttribute}
-#else
+			return $@"#if NET
 {spaces}{newAttribute}
+#else
+{spaces}{xamarinAttribute}
 #endif";
 
 		}
@@ -134,24 +134,24 @@ namespace binding
 {{
 	public partial class Class1
 	{{
-#if !NET
-		[Introduced (PlatformName.MacOSX, 10, 0)]
-#else
+#if NET
 		[SupportedOSPlatform(""macos10.0"")]
+#else
+		[Introduced (PlatformName.MacOSX, 10, 0)]
 #endif
 		public void Foo () {{}}
 
-#if !NET
-		[Introduced (PlatformName.iOS, 6, 0)]
-#else
+#if NET
 		[SupportedOSPlatform(""ios6.0"")]
+#else
+		[Introduced (PlatformName.iOS, 6, 0)]
 #endif
 		public void Bar () {{}}
 
-#if !NET
-		[Introduced (PlatformName.MacOSX, 10, 0)]
-#else
+#if NET
 		[SupportedOSPlatform(""macos10.0"")]
+#else
+		[Introduced (PlatformName.MacOSX, 10, 0)]
 #endif
 		public void Buzz () {{}}
 
@@ -187,20 +187,20 @@ namespace binding
 {{
 	public partial class Class1
 	{{
-#if !NET
-		[Introduced (PlatformName.MacOSX, 10, 0)]
-#else
+#if NET
 		[SupportedOSPlatform(""macos10.0"")]
+#else
+		[Introduced (PlatformName.MacOSX, 10, 0)]
 #endif
 		public void Foo () {{}}
 
 
 
 
-#if !NET
-		[Introduced (PlatformName.iOS, 6, 0)]
-#else
+#if NET
 		[SupportedOSPlatform(""ios6.0"")]
+#else
+		[Introduced (PlatformName.iOS, 6, 0)]
 #endif
 		public void Bar () {{}}
 	}}

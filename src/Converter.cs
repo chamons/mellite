@@ -103,28 +103,29 @@ namespace mellite {
 				List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 
 				// We want to generate:
-				// #if !NET
-				// EXISTING_ATTRIBUTES
-				// #else
+				// #if NET
 				// CONVERTED_ATTRIBUTES
+				// #else
+				// EXISTING_ATTRIBUTES
 				// #endif
-				// The #if, all EXISTING_ATTRIBUTES, and the #else are all leading trivia of
-				// the first CONVERTED_ATTRIBUTE, and the #endif is trailing of the last one
+				// The #if is leading trivia of the first CONVERTED_ATTRIBUTE,
+				// and all the rest is the trailing of the last one
 				// Each attribute will need indentTrivia to be tabbed over enough
 				var leading = new List<SyntaxTrivia> ();
 				leading.AddRange (newlineTrivia);
-				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ("#if !NET"));
-				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-				foreach (var attribute in existingAttributes) {
-					leading.Add (SyntaxFactory.DisabledText (CreateAttributeList (attribute).WithLeadingTrivia (indentTrivia).ToFullString ()));
-					leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-				}
-				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ("#else"));
+				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ("#if NET"));
 				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 				leading.AddRange (indentTrivia);
 
 				var trailing = new List<SyntaxTrivia> ();
 				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+				trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#else"));
+				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+
+				foreach (var attribute in existingAttributes) {
+					trailing.Add (SyntaxFactory.DisabledText (CreateAttributeList (attribute).WithLeadingTrivia (indentTrivia).ToFullString ()));
+					trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+				}
 				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("#endif"));
 				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 
