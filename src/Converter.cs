@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using mellite.Utilities;
 
 namespace mellite {
 	public static class Converter {
@@ -30,173 +31,10 @@ namespace mellite {
 	}
 
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
-		readonly SemanticModel SemanticModel;
+		public AttributeConverterVisitor (SemanticModel semanticModel) { }
 
-		public AttributeConverterVisitor (SemanticModel semanticModel) => SemanticModel = semanticModel;
-
-		// In this example:
-		//  [Introduced (PlatformName.MacOSX, 10, 0)]
-		//  public void Foo () {{}}
-		//
-		//  [Introduced (PlatformName.iOS, 6, 0)]
-		//  public void Bar () {{}}
-		// Bar has two elements in its leading trivia: Newline and Tab
-		// The newline being between the Foo and Bar declaration
-		// and the Tab being the indent of Bar
-		// We want to copy just the later (Tab) to the synthesized attributes
-		// and put the newline BEFORE the #if if
-		// So split the trivia to everything before and including the last newline and everything else
-		(SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia (SyntaxNode node)
-		{
-			var newlines = new SyntaxTriviaList ();
-			var rest = new SyntaxTriviaList ();
-
-			// XXX - this could be more efficient if we find the split point and bulk copy
-			bool foundSplit = false;
-			foreach (var trivia in node.GetLeadingTrivia ().Reverse ()) {
-				if (trivia.ToFullString () == "\r\n" || trivia.ToFullString () == "\n") {
-					foundSplit = true;
-				}
-
-				if (foundSplit) {
-					newlines = newlines.Add (trivia);
-				} else {
-					rest = rest.Add (trivia);
-				}
-			}
-			return (new SyntaxTriviaList (newlines.Reverse ()), new SyntaxTriviaList (rest.Reverse ()));
-		}
-
-		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member)
-		{
-			// All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
-			var createdAttributes = new List<AttributeListSyntax> ();
-			var existingAttributes = new List<AttributeSyntax> ();
-			// As we have to create a large #if sequence, these must be processed together
-			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
-			var introducedAttributesToProcess = new List<AttributeSyntax> ();
-
-			// Need to process trivia from first element to get proper tabbing and newline before...
-			SyntaxTriviaList? newlineTrivia = null;
-			SyntaxTriviaList? indentTrivia = null;
-			foreach (var attributeList in member.AttributeLists) {
-				if (newlineTrivia == null) {
-					(newlineTrivia, indentTrivia) = SplitNodeTrivia (attributeList);
-				}
-
-				foreach (var attribute in attributeList.Attributes) {
-					switch (attribute.Name.ToString ()) {
-					case "Introduced": {
-						introducedAttributesToProcess.Add (attribute);
-						existingAttributes.Add (attribute);
-						break;
-					}
-					case "Deprecated": {
-						deprecatedAttributesToProcess.Add (attribute);
-						existingAttributes.Add (attribute);
-						break;
-					}
-					case "AttributeUsage":
-					case "NoMac":
-					case "NoiOS":
-						// XXX - For now...
-						break;
-					default:
-						throw new NotImplementedException ($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.Name}'");
-					}
-				}
-			}
-
-			for (int i = 0; i < introducedAttributesToProcess.Count; ++i) {
-				var attribute = introducedAttributesToProcess [i];
-				var newNode = ProcessSupportedAvailabilityNode (attribute);
-				if (newNode != null) {
-					var newAttribute = CreateAttributeList (newNode);
-					if (i != introducedAttributesToProcess.Count - 1) {
-						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (indentTrivia));
-					}
-					createdAttributes.Add (newAttribute);
-				}
-			}
-
-			// We must sort IOS to be the last element in deprecatedAttributesToProcess
-			// as the #if define is a superset of others and must come last
-			int iOSDeprecationIndex = deprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
-			if (iOSDeprecationIndex != -1) {
-				var deprecationElement = deprecatedAttributesToProcess [iOSDeprecationIndex];
-				deprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
-				deprecatedAttributesToProcess.Add (deprecationElement);
-			}
-			if (deprecatedAttributesToProcess.Count > 0) {
-				foreach (var newNode in ProcessDeprecatedNode (deprecatedAttributesToProcess, indentTrivia)) {
-					createdAttributes.Add (newNode);
-				}
-			}
-
-			if (newlineTrivia != null && indentTrivia != null) {
-				List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
-
-				// We want to generate:
-				// #if NET
-				// CONVERTED_ATTRIBUTES
-				// #else
-				// EXISTING_ATTRIBUTES
-				// #endif
-				// The #if is leading trivia of the first CONVERTED_ATTRIBUTE,
-				// and all the rest is the trailing of the last one
-				// Each attribute will need indentTrivia to be tabbed over enough
-				var leading = new List<SyntaxTrivia> ();
-				leading.AddRange (newlineTrivia);
-				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ("#if NET"));
-				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-				leading.AddRange (indentTrivia);
-
-				var trailing = new List<SyntaxTrivia> ();
-				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-				trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#else"));
-				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-
-				foreach (var attribute in existingAttributes) {
-					trailing.Add (SyntaxFactory.DisabledText (CreateAttributeList (attribute).WithLeadingTrivia (indentTrivia).ToFullString ()));
-					trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-				}
-				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("#endif"));
-				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-
-				for (int i = 0; i < createdAttributes.Count; i += 1) {
-					var attribute = createdAttributes [i];
-
-					if (i == 0) {
-						attribute = attribute.WithLeadingTrivia (attribute.GetLeadingTrivia ().AddRange (leading));
-					}
-					if (i == createdAttributes.Count - 1) {
-						attribute = attribute.WithTrailingTrivia (attribute.GetTrailingTrivia ().AddRange (trailing));
-					}
-					finalAttributes.Add (attribute);
-				}
-
-				SyntaxList<AttributeListSyntax> finalAttributeLists = new SyntaxList<AttributeListSyntax> (finalAttributes);
-				return member.WithAttributeLists (finalAttributeLists);
-			}
-			return member;
-		}
-
-		AttributeListSyntax CreateAttributeList (AttributeSyntax createdAttribute)
-		{
-			createdAttribute = createdAttribute.WithName (createdAttribute.Name.WithTrailingTrivia (SyntaxFactory.ParseLeadingTrivia (" ")));
-			var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
-			return SyntaxFactory.AttributeList (netAttributeElements);
-		}
-
-		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node)
-		{
-			return Apply (node);
-		}
-
-		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node)
-		{
-			return Apply (node);
-		}
+		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node);
+		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node);
 
 		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
 		{
@@ -205,6 +43,81 @@ namespace mellite {
 				return Apply (processedNode);
 			}
 			return null;
+		}
+
+		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member)
+		{
+			HarvestedMemberInfo info = Harvester.Process (member);
+
+			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
+				var attribute = info.IntroducedAttributesToProcess [i];
+				var newNode = ProcessSupportedAvailabilityNode (attribute);
+				if (newNode != null) {
+					var newAttribute = newNode.ToAttributeList ();
+					if (i != info.IntroducedAttributesToProcess.Count - 1) {
+						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (info.IndentTrivia));
+					}
+					info.CreatedAttributes.Add (newAttribute);
+				}
+			}
+
+			// We must sort IOS to be the last element in deprecatedAttributesToProcess
+			// as the #if define is a superset of others and must come last
+			int iOSDeprecationIndex = info.DeprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
+			if (iOSDeprecationIndex != -1) {
+				var deprecationElement = info.DeprecatedAttributesToProcess [iOSDeprecationIndex];
+				info.DeprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
+				info.DeprecatedAttributesToProcess.Add (deprecationElement);
+			}
+			if (info.DeprecatedAttributesToProcess.Count > 0) {
+				foreach (var newNode in ProcessDeprecatedNode (info.DeprecatedAttributesToProcess, info.IndentTrivia)) {
+					info.CreatedAttributes.Add (newNode);
+				}
+			}
+
+			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
+
+			// We want to generate:
+			// #if NET
+			// CONVERTED_ATTRIBUTES
+			// #else
+			// EXISTING_ATTRIBUTES
+			// #endif
+			// The #if is leading trivia of the first CONVERTED_ATTRIBUTE,
+			// and all the rest is the trailing of the last one
+			// Each attribute will need indentTrivia to be tabbed over enough
+			var leading = new List<SyntaxTrivia> ();
+			leading.AddRange (info.NewlineTrivia);
+			leading.AddRange (SyntaxFactory.ParseLeadingTrivia ("#if NET"));
+			leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			leading.AddRange (info.IndentTrivia);
+
+			var trailing = new List<SyntaxTrivia> ();
+			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#else"));
+			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+
+			foreach (var attribute in info.ExistingAttributes) {
+				trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
+				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			}
+			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("#endif"));
+			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+
+			for (int i = 0; i < info.CreatedAttributes.Count; i += 1) {
+				var attribute = info.CreatedAttributes [i];
+
+				if (i == 0) {
+					attribute = attribute.WithLeadingTrivia (attribute.GetLeadingTrivia ().AddRange (leading));
+				}
+				if (i == info.CreatedAttributes.Count - 1) {
+					attribute = attribute.WithTrailingTrivia (attribute.GetTrailingTrivia ().AddRange (trailing));
+				}
+				finalAttributes.Add (attribute);
+			}
+
+			SyntaxList<AttributeListSyntax> finalAttributeLists = new SyntaxList<AttributeListSyntax> (finalAttributes);
+			return member.WithAttributeLists (finalAttributeLists);
 		}
 
 		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)
@@ -246,7 +159,7 @@ namespace mellite {
 			// Add all of the deprecated as unsupported in net6
 			for (int i = 0; i < nodes.Count; i++) {
 				var unsupported = ProcessUnsupportedAvailabilityNode (nodes [i])!;
-				AttributeListSyntax attribute = CreateAttributeList (unsupported);
+				AttributeListSyntax attribute = unsupported.ToAttributeList ();
 				// Indent if not first
 				if (i != 0) {
 					attribute = attribute.WithLeadingTrivia (indentTrivia);
@@ -282,7 +195,7 @@ namespace mellite {
 				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
 				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 				if (i != nodes.Count - 1) {
-					leading.Add (SyntaxFactory.DisabledText (CreateAttributeList (CreateObsoleteAttribute (node)).WithLeadingTrivia (indentTrivia).ToFullString ()));
+					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (indentTrivia).ToFullString ()));
 				}
 			}
 			if (indentTrivia != null) {
@@ -295,7 +208,7 @@ namespace mellite {
 			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
 
 			// Create the actual attribute and add it to the list returned
-			returnNodes.Add (CreateAttributeList (CreateObsoleteAttribute (nodes.Last ())).WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
+			returnNodes.Add (CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
 			return returnNodes;
 		}
 
@@ -308,46 +221,6 @@ namespace mellite {
 
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
 			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
-		}
-	}
-
-	public static class PlatformArgumentParser {
-		public static string? Parse (string s)
-		{
-			switch (s) {
-			case "PlatformName.MacOSX":
-				return "macos";
-			case "PlatformName.iOS":
-				return "ios";
-			case "PlatformName.TvOS":
-				return "tvos";
-			case "PlatformName.MacCatalyst":
-				return "maccatalyst";
-			case "PlatformName.None":
-			case "PlatformName.WatchOS":
-			case "PlatformName.UIKitForMac":
-			default:
-				return null;
-			}
-		}
-
-		public static string? ParseDefine (string s)
-		{
-			switch (s) {
-			case "PlatformName.MacOSX":
-				return "MONOMAC";
-			case "PlatformName.iOS":
-				return "IOS";
-			case "PlatformName.TvOS":
-				return "TVOS";
-			case "PlatformName.MacCatalyst":
-				return "__MACCATALYST__";
-			case "PlatformName.None":
-			case "PlatformName.WatchOS":
-			case "PlatformName.UIKitForMac":
-			default:
-				return null;
-			}
 		}
 	}
 }
