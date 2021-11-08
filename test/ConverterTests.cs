@@ -138,7 +138,15 @@ namespace binding
         [Deprecated (PlatformName.TvOS, 11, 0)]");
 
 			// Watch is not a platform we should output
-			//TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.WatchOS, 11, 0)]", "");
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.WatchOS, 11, 0)]", @"[UnsupportedOSPlatform(""macos11.0"")]
+        [UnsupportedOSPlatform(""ios11.0"")]
+#if MONOMAC
+        [Obsolete(""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+        [Obsolete(""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
+        [Deprecated (PlatformName.iOS, 11, 0)]
+        [Deprecated (PlatformName.WatchOS, 11, 0)]");
 		}
 
 		// Final smoke test of all base attributes

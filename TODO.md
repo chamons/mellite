@@ -1,6 +1,8 @@
 - Deprecation
+  - Fix all tests
   - Handle spaces around attributes
   - Sort iOS first in #if list
+- Refactor first part of Apply that gathers info
 - Handle NoMac, \* other stuff than just introduced
 - Ignore (but keep) non-relevant attributes
 - iOS implies Catalyst

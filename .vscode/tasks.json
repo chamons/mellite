@@ -50,8 +50,7 @@
                 "test",
                 "${workspaceFolder}/test/mellite.tests.csproj",
                 "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary",
-                "--filter:mellite.tests.ConverterTests.TestDeprecated"
+                "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         }

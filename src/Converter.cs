@@ -74,6 +74,7 @@ namespace mellite {
 			var existingAttributes = new List<AttributeSyntax> ();
 			// As we have to create a large #if sequence, these must be processed together
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
+			var introducedAttributesToProcess = new List<AttributeSyntax> ();
 
 			// Need to process trivia from first element to get proper tabbing and newline before...
 			SyntaxTriviaList? newlineTrivia = null;
@@ -86,11 +87,8 @@ namespace mellite {
 				foreach (var attribute in attributeList.Attributes) {
 					switch (attribute.Name.ToString ()) {
 					case "Introduced": {
-						var newNode = ProcessSupportedAvailabilityNode (attribute);
-						if (newNode != null) {
-							createdAttributes.Add (CreateAttributeList (newNode));
-							existingAttributes.Add (attribute);
-						}
+						introducedAttributesToProcess.Add (attribute);
+						existingAttributes.Add (attribute);
 						break;
 					}
 					case "Deprecated": {
@@ -106,6 +104,18 @@ namespace mellite {
 					default:
 						throw new NotImplementedException ($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.Name}'");
 					}
+				}
+			}
+
+			for (int i = 0; i < introducedAttributesToProcess.Count; ++i) {
+				var attribute = introducedAttributesToProcess [i];
+				var newNode = ProcessSupportedAvailabilityNode (attribute);
+				if (newNode != null) {
+					var newAttribute = CreateAttributeList (newNode);
+					if (i != introducedAttributesToProcess.Count - 1) {
+						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (indentTrivia));
+					}
+					createdAttributes.Add (newAttribute);
 				}
 			}
 
@@ -147,12 +157,7 @@ namespace mellite {
 
 				for (int i = 0; i < createdAttributes.Count; i += 1) {
 					var attribute = createdAttributes [i];
-					if (!attribute.HasLeadingTrivia) {
-						attribute = attribute.WithLeadingTrivia (indentTrivia);
-					}
-					if (!attribute.HasTrailingTrivia) {
-						attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-					}
+
 					if (i == 0) {
 						attribute = attribute.WithLeadingTrivia (attribute.GetLeadingTrivia ().AddRange (leading));
 					}
@@ -226,22 +231,22 @@ namespace mellite {
 		{
 			var returnNodes = new List<AttributeListSyntax> ();
 
-			// First add all of the deprecated as unsupported
+			// Filter any attributes that don't line up on NET6, such as watch first
+			nodes = nodes.Where (n => PlatformArgumentParser.ParseDefine (n.ArgumentList!.Arguments [0].ToString ()) != null).ToList ();
+
+			// Add all of the deprecated as unsupported in net6
 			for (int i = 0; i < nodes.Count; i++) {
-				var node = nodes [i];
-				var unsupported = ProcessUnsupportedAvailabilityNode (node);
-				if (unsupported != null) {
-					AttributeListSyntax attribute = CreateAttributeList (unsupported);
-					// Indent if not first
-					if (i != 0) {
-						attribute = attribute.WithLeadingTrivia (indentTrivia);
-					}
-					// Add newline at end of all but last
-					if (i != nodes.Count - 1) {
-						attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-					}
-					returnNodes.Add (attribute);
+				var unsupported = ProcessUnsupportedAvailabilityNode (nodes [i])!;
+				AttributeListSyntax attribute = CreateAttributeList (unsupported);
+				// Indent if not first
+				if (i != 0) {
+					attribute = attribute.WithLeadingTrivia (indentTrivia);
 				}
+				// Add newline at end of all but last
+				if (i != nodes.Count - 1) {
+					attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+				}
+				returnNodes.Add (attribute);
 			}
 
 			// Now build up with super attribute like this:
@@ -260,6 +265,7 @@ namespace mellite {
 
 			// Generate #if block with disabled attributes, skipping the last attribute which this will be attached to
 			var leading = new List<SyntaxTrivia> ();
+
 			for (int i = 0; i < nodes.Count; i++) {
 				var node = nodes [i];
 				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
