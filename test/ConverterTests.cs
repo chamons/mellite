@@ -120,18 +120,19 @@ namespace binding
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]");
 
+			// iOS must be ordered at end
 			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.MacCatalyst, 11, 0)][Deprecated (PlatformName.TvOS, 11, 0)]", @"[UnsupportedOSPlatform (""macos11.0"")]
-        [UnsupportedOSPlatform (""ios11.0"")]
         [UnsupportedOSPlatform (""maccatalyst11.0"")]
         [UnsupportedOSPlatform (""tvos11.0"")]
+        [UnsupportedOSPlatform (""ios11.0"")]
 #if MONOMAC
         [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
-#elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif __MACCATALYST__
         [Obsolete (""Starting with maccatalyst11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
         [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.MacCatalyst, 11, 0)]
