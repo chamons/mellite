@@ -104,13 +104,22 @@ namespace binding
 		}
 
 		[Fact]
-		public void TestAllAttributeKinds ()
+		public void TestDeprecated ()
 		{
-			TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)][Deprecated (PlatformName.MacOSX, 11, 0)][Obsoleted (PlatformName.MacOSX, 11, 0)][Unavailable (PlatformName.iOS)]", "");
-			TestMethodAttributeConversion ("[Mac (11, 0)][iOS (11, 0)][TV (10, 0)][MacCatalyst(11, 0)]", "");
-			TestMethodAttributeConversion ("[NoMac][NoiOS][NoTV][NoMacCatalyst]", "");
-			//TestMethodAttributeConversion ("[Watch (11, 0)][NoWatch]", "");
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)]", "");
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Obsoleted (PlatformName.iOS, 11, 0)]", "");
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Obsoleted (PlatformName.iOS, 11, 0)][Obsoleted (PlatformName.WatchOS, 11, 0)]", "");
 		}
+
+		// Final smoke test of all base attributes
+		// [Fact]
+		// public void TestAllAttributeKinds ()
+		// {
+		// 	TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)][Deprecated (PlatformName.MacOSX, 11, 0)][Obsoleted (PlatformName.MacOSX, 11, 0)][Unavailable (PlatformName.iOS)]", "");
+		// 	TestMethodAttributeConversion ("[Mac (11, 0)][iOS (11, 0)][TV (10, 0)][MacCatalyst(11, 0)]", "");
+		// 	TestMethodAttributeConversion ("[NoMac][NoiOS][NoTV][NoMacCatalyst]", "");
+		// 	//TestMethodAttributeConversion ("[Watch (11, 0)][NoWatch]", "");
+		// }
 
 		[Fact]
 		public void NewLinesBetweenElements ()
@@ -228,6 +237,19 @@ namespace binding
 		public void PlatformNameParsing (string platformName, string? netName)
 		{
 			Assert.Equal (netName, PlatformArgumentParser.Parse (platformName));
+		}
+
+		[Theory]
+		[InlineData ("PlatformName.MacOSX", "MONOMAC")]
+		[InlineData ("PlatformName.iOS", "IOS")]
+		[InlineData ("PlatformName.TvOS", "TVOS")]
+		[InlineData ("PlatformName.MacCatalyst", "__MACCATALYST__")]
+		[InlineData ("PlatformName.None", null)]
+		[InlineData ("PlatformName.WatchOS", null)]
+		[InlineData ("PlatformName.UIKitForMac", null)]
+		public void PlatformDefineParsing (string platformName, string? netName)
+		{
+			Assert.Equal (netName, PlatformArgumentParser.ParseDefine (platformName));
 		}
 	}
 }

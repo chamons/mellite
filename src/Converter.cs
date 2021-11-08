@@ -72,6 +72,8 @@ namespace mellite {
 			// All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
 			var createdAttributes = new List<AttributeSyntax> ();
 			var existingAttributes = new List<AttributeSyntax> ();
+			// As we have to create a large #if sequence, these must be processed together
+			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
 
 			// Need to process trivia from first element to get proper tabbing and newline before...
 			SyntaxTriviaList? newlineTrivia = null;
@@ -92,9 +94,7 @@ namespace mellite {
 						break;
 					}
 					case "Deprecated": {
-						foreach (var newNode in ProcessDeprecatedNode (attribute)) {
-							createdAttributes.Add (newNode);
-						}
+						deprecatedAttributesToProcess.Add (attribute);
 						existingAttributes.Add (attribute);
 						break;
 					}
@@ -106,6 +106,12 @@ namespace mellite {
 					default:
 						throw new NotImplementedException ($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.Name}'");
 					}
+				}
+			}
+
+			if (deprecatedAttributesToProcess.Count > 0) {
+				foreach (var newNode in ProcessDeprecatedNode (deprecatedAttributesToProcess, indentTrivia)) {
+					createdAttributes.Add (newNode);
 				}
 			}
 
@@ -210,21 +216,66 @@ namespace mellite {
 			return null;
 		}
 
-		// Add a bunch of #if blocks per platform here...
-		List<AttributeSyntax> ProcessDeprecatedNode (AttributeSyntax node)
+		List<AttributeSyntax> ProcessDeprecatedNode (List<AttributeSyntax> nodes, SyntaxTriviaList? indentTrivia)
 		{
 			var returnNodes = new List<AttributeSyntax> ();
-			var unsupported = ProcessUnsupportedAvailabilityNode (node);
-			if (unsupported != null) {
-				returnNodes.Add (unsupported);
-				var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
-				var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
-				// Skip 10 - sizeof("message: \"") and last "
-				var message = node.ArgumentList!.Arguments.Count > 3 ? $"{node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
-				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version} {message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
-				returnNodes.Add (SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args));
+
+			// First add all of the deprecated as unsupported
+			foreach (var node in nodes) {
+				var unsupported = ProcessUnsupportedAvailabilityNode (node);
+				if (unsupported != null) {
+					returnNodes.Add (unsupported);
+				}
 			}
+
+			// Now build up with super attribute like this:
+			// #if __MACCATALYST__
+			// [Obsolete ("Starting with maccatalyst$5.$6 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #elif IOS
+			// [Obsolete ("Starting with ios$1.$2 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #elif TVOS
+			// [Obsolete ("Starting with tvos$3.$4 $11' instead.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #elif MONOMAC
+			// [Obsolete ("Starting with macos$7.$8 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #endif
+			// So in order of platform listed:
+			// Generate ''#if define' then Obsolete for first element, '#elif define' then Obsolete for all but last
+			// Attach ^ to last attribute as 
+
+			// Generate #if block with disabled attributes, skipping the last attribute which this will be attached to
+			var leading = new List<SyntaxTrivia> ();
+			for (int i = 0; i < nodes.Count; i++) {
+				var node = nodes [i];
+				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
+				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
+
+				if (i != nodes.Count - 1) {
+					leading.Add (SyntaxFactory.DisabledText (CreateAttributeList (CreateObsoleteAttribute (node)).WithLeadingTrivia (indentTrivia).ToFullString ()));
+				}
+			}
+			if (indentTrivia != null) {
+				leading.AddRange (indentTrivia);
+			}
+
+			// Generate #endif after attribute
+			var trailing = new List<SyntaxTrivia> ();
+			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
+			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+
+			// Create the actual attribute and add it to the list returned
+			returnNodes.Add (CreateObsoleteAttribute (nodes.Last ()).WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
 			return returnNodes;
+		}
+
+		AttributeSyntax CreateObsoleteAttribute (AttributeSyntax node)
+		{
+			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+			var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+			// Skip 10 - sizeof("message: \"") and last "
+			var message = node.ArgumentList!.Arguments.Count > 3 ? $"{node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
+
+			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version} {message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
+			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
 		}
 	}
 
@@ -240,6 +291,25 @@ namespace mellite {
 				return "tvos";
 			case "PlatformName.MacCatalyst":
 				return "maccatalyst";
+			case "PlatformName.None":
+			case "PlatformName.WatchOS":
+			case "PlatformName.UIKitForMac":
+			default:
+				return null;
+			}
+		}
+
+		public static string? ParseDefine (string s)
+		{
+			switch (s) {
+			case "PlatformName.MacOSX":
+				return "MONOMAC";
+			case "PlatformName.iOS":
+				return "IOS";
+			case "PlatformName.TvOS":
+				return "TVOS";
+			case "PlatformName.MacCatalyst":
+				return "__MACCATALYST__";
 			case "PlatformName.None":
 			case "PlatformName.WatchOS":
 			case "PlatformName.UIKitForMac":

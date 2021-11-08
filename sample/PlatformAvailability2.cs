@@ -45,21 +45,6 @@ namespace ObjCRuntime {
 		Obsoleted,
 		Unavailable
 	}
-
-	[AttributeUsage (
-		AttributeTargets.Assembly |
-		AttributeTargets.Class |
-		AttributeTargets.Constructor |
-		AttributeTargets.Delegate |
-		AttributeTargets.Enum |
-		AttributeTargets.Event |
-		AttributeTargets.Field |
-		AttributeTargets.Interface |
-		AttributeTargets.Method |
-		AttributeTargets.Property |
-		AttributeTargets.Struct,
-		AllowMultiple = true
-	)]
 	public abstract class AvailabilityBaseAttribute : Attribute {
 		public AvailabilityKind AvailabilityKind { get; private set; }
 		public PlatformName Platform { get; private set; }
