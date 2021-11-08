@@ -70,7 +70,7 @@ namespace mellite {
 		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member)
 		{
 			// All availability attributes such as [Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)] need to be collected
-			var createdAttributes = new List<AttributeSyntax> ();
+			var createdAttributes = new List<AttributeListSyntax> ();
 			var existingAttributes = new List<AttributeSyntax> ();
 			// As we have to create a large #if sequence, these must be processed together
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
@@ -88,7 +88,7 @@ namespace mellite {
 					case "Introduced": {
 						var newNode = ProcessSupportedAvailabilityNode (attribute);
 						if (newNode != null) {
-							createdAttributes.Add (newNode);
+							createdAttributes.Add (CreateAttributeList (newNode));
 							existingAttributes.Add (attribute);
 						}
 						break;
@@ -146,14 +146,20 @@ namespace mellite {
 				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 
 				for (int i = 0; i < createdAttributes.Count; i += 1) {
-					var finalAttribute = CreateAttributeList (createdAttributes [i]).WithLeadingTrivia (indentTrivia).WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+					var attribute = createdAttributes [i];
+					if (!attribute.HasLeadingTrivia) {
+						attribute = attribute.WithLeadingTrivia (indentTrivia);
+					}
+					if (!attribute.HasTrailingTrivia) {
+						attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+					}
 					if (i == 0) {
-						finalAttribute = finalAttribute.WithLeadingTrivia (leading);
+						attribute = attribute.WithLeadingTrivia (attribute.GetLeadingTrivia ().AddRange (leading));
 					}
 					if (i == createdAttributes.Count - 1) {
-						finalAttribute = finalAttribute.WithTrailingTrivia (trailing);
+						attribute = attribute.WithTrailingTrivia (attribute.GetTrailingTrivia ().AddRange (trailing));
 					}
-					finalAttributes.Add (finalAttribute);
+					finalAttributes.Add (attribute);
 				}
 
 				SyntaxList<AttributeListSyntax> finalAttributeLists = new SyntaxList<AttributeListSyntax> (finalAttributes);
@@ -216,15 +222,25 @@ namespace mellite {
 			return null;
 		}
 
-		List<AttributeSyntax> ProcessDeprecatedNode (List<AttributeSyntax> nodes, SyntaxTriviaList? indentTrivia)
+		List<AttributeListSyntax> ProcessDeprecatedNode (List<AttributeSyntax> nodes, SyntaxTriviaList? indentTrivia)
 		{
-			var returnNodes = new List<AttributeSyntax> ();
+			var returnNodes = new List<AttributeListSyntax> ();
 
 			// First add all of the deprecated as unsupported
-			foreach (var node in nodes) {
+			for (int i = 0; i < nodes.Count; i++) {
+				var node = nodes [i];
 				var unsupported = ProcessUnsupportedAvailabilityNode (node);
 				if (unsupported != null) {
-					returnNodes.Add (unsupported);
+					AttributeListSyntax attribute = CreateAttributeList (unsupported);
+					// Indent if not first
+					if (i != 0) {
+						attribute = attribute.WithLeadingTrivia (indentTrivia);
+					}
+					// Add newline at end of all but last
+					if (i != nodes.Count - 1) {
+						attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+					}
+					returnNodes.Add (attribute);
 				}
 			}
 
@@ -247,8 +263,9 @@ namespace mellite {
 			for (int i = 0; i < nodes.Count; i++) {
 				var node = nodes [i];
 				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
+				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
-
+				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 				if (i != nodes.Count - 1) {
 					leading.Add (SyntaxFactory.DisabledText (CreateAttributeList (CreateObsoleteAttribute (node)).WithLeadingTrivia (indentTrivia).ToFullString ()));
 				}
@@ -259,11 +276,11 @@ namespace mellite {
 
 			// Generate #endif after attribute
 			var trailing = new List<SyntaxTrivia> ();
-			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
 			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
 
 			// Create the actual attribute and add it to the list returned
-			returnNodes.Add (CreateObsoleteAttribute (nodes.Last ()).WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
+			returnNodes.Add (CreateAttributeList (CreateObsoleteAttribute (nodes.Last ())).WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
 			return returnNodes;
 		}
 
@@ -272,10 +289,10 @@ namespace mellite {
 			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
 			var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
 			// Skip 10 - sizeof("message: \"") and last "
-			var message = node.ArgumentList!.Arguments.Count > 3 ? $"{node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
+			var message = node.ArgumentList!.Arguments.Count > 3 ? $" {node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
 
-			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version} {message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
-			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
+			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
+			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
 		}
 	}
 

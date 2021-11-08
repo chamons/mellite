@@ -1,3 +1,6 @@
+- Deprecation
+  - Handle spaces around attributes
+  - Sort iOS first in #if list
 - Handle NoMac, \* other stuff than just introduced
 - Ignore (but keep) non-relevant attributes
 - iOS implies Catalyst
