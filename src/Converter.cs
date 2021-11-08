@@ -49,32 +49,14 @@ namespace mellite {
 		{
 			HarvestedMemberInfo info = Harvester.Process (member);
 
-			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
-				var attribute = info.IntroducedAttributesToProcess [i];
-				var newNode = ProcessSupportedAvailabilityNode (attribute);
-				if (newNode != null) {
-					var newAttribute = newNode.ToAttributeList ();
-					if (i != info.IntroducedAttributesToProcess.Count - 1) {
-						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (info.IndentTrivia));
-					}
-					info.CreatedAttributes.Add (newAttribute);
-				}
-			}
+			ProcessIntroduced (info);
+			ProcessDeprecated (info);
 
-			// We must sort IOS to be the last element in deprecatedAttributesToProcess
-			// as the #if define is a superset of others and must come last
-			int iOSDeprecationIndex = info.DeprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
-			if (iOSDeprecationIndex != -1) {
-				var deprecationElement = info.DeprecatedAttributesToProcess [iOSDeprecationIndex];
-				info.DeprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
-				info.DeprecatedAttributesToProcess.Add (deprecationElement);
-			}
-			if (info.DeprecatedAttributesToProcess.Count > 0) {
-				foreach (var newNode in ProcessDeprecatedNode (info.DeprecatedAttributesToProcess, info.IndentTrivia)) {
-					info.CreatedAttributes.Add (newNode);
-				}
-			}
+			return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info)));
+		}
 
+		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info)
+		{
 			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 
 			// We want to generate:
@@ -116,8 +98,39 @@ namespace mellite {
 				finalAttributes.Add (attribute);
 			}
 
-			SyntaxList<AttributeListSyntax> finalAttributeLists = new SyntaxList<AttributeListSyntax> (finalAttributes);
-			return member.WithAttributeLists (finalAttributeLists);
+			return finalAttributes;
+		}
+
+		void ProcessDeprecated (HarvestedMemberInfo info)
+		{
+			// We must sort IOS to be the last element in deprecatedAttributesToProcess
+			// as the #if define is a superset of others and must come last
+			int iOSDeprecationIndex = info.DeprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
+			if (iOSDeprecationIndex != -1) {
+				var deprecationElement = info.DeprecatedAttributesToProcess [iOSDeprecationIndex];
+				info.DeprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
+				info.DeprecatedAttributesToProcess.Add (deprecationElement);
+			}
+			if (info.DeprecatedAttributesToProcess.Count > 0) {
+				foreach (var newNode in ProcessDeprecatedNode (info.DeprecatedAttributesToProcess, info.IndentTrivia)) {
+					info.CreatedAttributes.Add (newNode);
+				}
+			}
+		}
+
+		void ProcessIntroduced (HarvestedMemberInfo info)
+		{
+			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
+				var attribute = info.IntroducedAttributesToProcess [i];
+				var newNode = ProcessSupportedAvailabilityNode (attribute);
+				if (newNode != null) {
+					var newAttribute = newNode.ToAttributeList ();
+					if (i != info.IntroducedAttributesToProcess.Count - 1) {
+						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (info.IndentTrivia));
+					}
+					info.CreatedAttributes.Add (newAttribute);
+				}
+			}
 		}
 
 		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)
