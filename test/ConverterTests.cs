@@ -51,21 +51,21 @@ namespace binding
 		[Fact]
 		public void SingleAttributeOnClass ()
 		{
-			TestClassAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
-			TestClassAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
-			TestClassAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-    [SupportedOSPlatform(""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+			TestClassAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform (\"macos10.0\")]");
+			TestClassAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform (\"ios6.0\")]");
+			TestClassAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform (""ios6.0"")]
+    [SupportedOSPlatform (""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
     [Introduced (PlatformName.MacOSX, 10, 0)]");
-			TestClassAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0), Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-    [SupportedOSPlatform(""macos10.0"")]
-    [SupportedOSPlatform(""maccatalyst10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+			TestClassAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0), Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform (""ios6.0"")]
+    [SupportedOSPlatform (""macos10.0"")]
+    [SupportedOSPlatform (""maccatalyst10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
     [Introduced (PlatformName.MacOSX, 10, 0)]
     [Introduced (PlatformName.MacCatalyst, 10, 0)]");
 			TestClassAttributeConversion (@"[Introduced (PlatformName.iOS, 6, 0)]
     [Introduced (PlatformName.MacOSX, 10, 0)]
-    [Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-    [SupportedOSPlatform(""macos10.0"")]
-    [SupportedOSPlatform(""maccatalyst10.0"")]");
+    [Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform (""ios6.0"")]
+    [SupportedOSPlatform (""macos10.0"")]
+    [SupportedOSPlatform (""maccatalyst10.0"")]");
 		}
 
 		void TestMethodAttributeConversion (string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
@@ -86,64 +86,64 @@ namespace binding
 		[Fact]
 		public void SingleAttributeOnMethod ()
 		{
-			TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform(\"macos10.0\")]");
-			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform(\"ios6.0\")]");
-			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-        [SupportedOSPlatform(""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+			TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform (\"macos10.0\")]");
+			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform (\"ios6.0\")]");
+			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0)]", @"[SupportedOSPlatform (""ios6.0"")]
+        [SupportedOSPlatform (""macos10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
         [Introduced (PlatformName.MacOSX, 10, 0)]");
-			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0), Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-        [SupportedOSPlatform(""macos10.0"")]
-        [SupportedOSPlatform(""maccatalyst10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
+			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0), Introduced (PlatformName.MacOSX, 10, 0), Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform (""ios6.0"")]
+        [SupportedOSPlatform (""macos10.0"")]
+        [SupportedOSPlatform (""maccatalyst10.0"")]", xamarinAttributeAfterConvert: @"[Introduced (PlatformName.iOS, 6, 0)]
         [Introduced (PlatformName.MacOSX, 10, 0)]
         [Introduced (PlatformName.MacCatalyst, 10, 0)]");
 			TestMethodAttributeConversion (@"[Introduced (PlatformName.iOS, 6, 0)]
         [Introduced (PlatformName.MacOSX, 10, 0)]
-        [Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform(""ios6.0"")]
-        [SupportedOSPlatform(""macos10.0"")]
-        [SupportedOSPlatform(""maccatalyst10.0"")]");
+        [Introduced (PlatformName.MacCatalyst, 10, 0)]", @"[SupportedOSPlatform (""ios6.0"")]
+        [SupportedOSPlatform (""macos10.0"")]
+        [SupportedOSPlatform (""maccatalyst10.0"")]");
 		}
 
 		[Fact]
 		public void TestDeprecated ()
 		{
-			TestMethodAttributeConversion ("[Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform(""ios11.0"")]
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform (""ios11.0"")]
 #if IOS
-        [Obsolete(""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif");
 
-			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform(""macos11.0"")]
-        [UnsupportedOSPlatform(""ios11.0"")]
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform (""macos11.0"")]
+        [UnsupportedOSPlatform (""ios11.0"")]
 #if MONOMAC
-        [Obsolete(""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete(""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]");
 
-			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.MacCatalyst, 11, 0)][Deprecated (PlatformName.TvOS, 11, 0)]", @"[UnsupportedOSPlatform(""macos11.0"")]
-        [UnsupportedOSPlatform(""ios11.0"")]
-        [UnsupportedOSPlatform(""maccatalyst11.0"")]
-        [UnsupportedOSPlatform(""tvos11.0"")]
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.MacCatalyst, 11, 0)][Deprecated (PlatformName.TvOS, 11, 0)]", @"[UnsupportedOSPlatform (""macos11.0"")]
+        [UnsupportedOSPlatform (""ios11.0"")]
+        [UnsupportedOSPlatform (""maccatalyst11.0"")]
+        [UnsupportedOSPlatform (""tvos11.0"")]
 #if MONOMAC
-        [Obsolete(""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete(""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif __MACCATALYST__
-        [Obsolete(""Starting with maccatalyst11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with maccatalyst11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
-        [Obsolete(""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.MacCatalyst, 11, 0)]
         [Deprecated (PlatformName.TvOS, 11, 0)]");
 
 			// Watch is not a platform we should output
-			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.WatchOS, 11, 0)]", @"[UnsupportedOSPlatform(""macos11.0"")]
-        [UnsupportedOSPlatform(""ios11.0"")]
+			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.WatchOS, 11, 0)]", @"[UnsupportedOSPlatform (""macos11.0"")]
+        [UnsupportedOSPlatform (""ios11.0"")]
 #if MONOMAC
-        [Obsolete(""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete(""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.WatchOS, 11, 0)]");
@@ -191,21 +191,21 @@ namespace binding
 	public partial class Class1
 	{{
 #if NET
-		[SupportedOSPlatform(""macos10.0"")]
+		[SupportedOSPlatform (""macos10.0"")]
 #else
 		[Introduced (PlatformName.MacOSX, 10, 0)]
 #endif
 		public void Foo () {{}}
 
 #if NET
-		[SupportedOSPlatform(""ios6.0"")]
+		[SupportedOSPlatform (""ios6.0"")]
 #else
 		[Introduced (PlatformName.iOS, 6, 0)]
 #endif
 		public void Bar () {{}}
 
 #if NET
-		[SupportedOSPlatform(""macos10.0"")]
+		[SupportedOSPlatform (""macos10.0"")]
 #else
 		[Introduced (PlatformName.MacOSX, 10, 0)]
 #endif
@@ -244,7 +244,7 @@ namespace binding
 	public partial class Class1
 	{{
 #if NET
-		[SupportedOSPlatform(""macos10.0"")]
+		[SupportedOSPlatform (""macos10.0"")]
 #else
 		[Introduced (PlatformName.MacOSX, 10, 0)]
 #endif
@@ -254,7 +254,7 @@ namespace binding
 
 
 #if NET
-		[SupportedOSPlatform(""ios6.0"")]
+		[SupportedOSPlatform (""ios6.0"")]
 #else
 		[Introduced (PlatformName.iOS, 6, 0)]
 #endif

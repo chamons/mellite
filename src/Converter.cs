@@ -175,6 +175,7 @@ namespace mellite {
 
 		AttributeListSyntax CreateAttributeList (AttributeSyntax createdAttribute)
 		{
+			createdAttribute = createdAttribute.WithName (createdAttribute.Name.WithTrailingTrivia (SyntaxFactory.ParseLeadingTrivia (" ")));
 			var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
 			return SyntaxFactory.AttributeList (netAttributeElements);
 		}
