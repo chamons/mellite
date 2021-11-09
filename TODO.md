@@ -1,4 +1,7 @@
 - Handle NoMac, \* other stuff than just introduced
+  - Need to change all PlatformArgumentParser.ParseDefine calls to something that looks for the first argument, and if doesn't exist then switch on type
+  - Then the existing unit test should work
+  - Then check the short platform versions like [iOS (12,0)] which should just work
 - Ignore (but keep) non-relevant attributes
 - iOS implies Catalyst
 - Handing child inherits parent

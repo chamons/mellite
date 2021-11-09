@@ -65,15 +65,17 @@ namespace mellite {
 						existingAttributes.Add (attribute);
 						break;
 					}
+					case "NoMac":
+					case "NoiOS":
+					case "NoWatch":
+					case "NoTVAttribute":
+					case "NoMacCatalyst":
 					case "Obsolete": {
 						obsoleteAttributesToProcess.Add (attribute);
 						existingAttributes.Add (attribute);
 						break;
 					}
-					case "AttributeUsage":
-					case "NoMac":
-					case "NoiOS":
-						// XXX - For now...
+					case "AttributeUsage": // HACK
 						break;
 					default:
 						throw new NotImplementedException ($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.Name}'");

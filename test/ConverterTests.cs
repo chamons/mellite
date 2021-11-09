@@ -188,6 +188,17 @@ namespace binding
         [UnsupportedOSPlatform (""tvos11.0"")]");
 		}
 
+		[Fact]
+		public void UnavailableAsOtherNames ()
+		{
+			TestMethodAttributeConversion ("[NoiOS]", @"[UnsupportedOSPlatform (""ios"")]");
+			TestMethodAttributeConversion (@"[NoiOS]
+        [NoMac]", @"[UnsupportedOSPlatform (""ios"")]
+        [UnsupportedOSPlatform (""macos"")]");
+			TestMethodAttributeConversion (@"[NoiOS]
+        [NoWatch]", @"[UnsupportedOSPlatform (""ios"")]");
+		}
+
 		// Final smoke test of all base attributes
 		// [Fact]
 		// public void TestAllAttributeKinds ()
