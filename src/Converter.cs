@@ -104,18 +104,13 @@ namespace mellite {
 
 		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
 		{
-			if (info.DeprecatedAttributesToProcess.Count > 0) {
-				return ProcessDeprecatedNode (info.DeprecatedAttributesToProcess, info.IndentTrivia);
+			if (info.DeprecatedAttributesToProcess.Count == 0) {
+				return new List<AttributeListSyntax> ();
 			}
-			return new List<AttributeListSyntax> ();
-		}
-
-		List<AttributeListSyntax> ProcessDeprecatedNode (IList<AttributeSyntax> nodes, SyntaxTriviaList? indentTrivia)
-		{
-			var returnNodes = new List<AttributeListSyntax> ();
+			var createdAttributes = new List<AttributeListSyntax> ();
 
 			// Filter any attributes that don't line up on NET6, such as watch first
-			nodes = nodes.Where (n => PlatformArgumentParser.ParseDefine (n.ArgumentList!.Arguments [0].ToString ()) != null).ToList ();
+			var nodes = info.DeprecatedAttributesToProcess.Where (n => PlatformArgumentParser.ParseDefine (n.ArgumentList!.Arguments [0].ToString ()) != null).ToList ();
 
 			// Add all of the deprecated as unsupported in net6
 			for (int i = 0; i < nodes.Count; i++) {
@@ -123,13 +118,13 @@ namespace mellite {
 				AttributeListSyntax attribute = unsupported.ToAttributeList ();
 				// Indent if not first
 				if (i != 0) {
-					attribute = attribute.WithLeadingTrivia (indentTrivia);
+					attribute = attribute.WithLeadingTrivia (info.IndentTrivia);
 				}
 				// Add newline at end of all but last
 				if (i != nodes.Count - 1) {
 					attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 				}
-				returnNodes.Add (attribute);
+				createdAttributes.Add (attribute);
 			}
 
 			// Now build up with super attribute like this:
@@ -156,12 +151,10 @@ namespace mellite {
 				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
 				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 				if (i != nodes.Count - 1) {
-					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (indentTrivia).ToFullString ()));
+					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
 				}
 			}
-			if (indentTrivia != null) {
-				leading.AddRange (indentTrivia);
-			}
+			leading.AddRange (info.IndentTrivia);
 
 			// Generate #endif after attribute
 			var trailing = new List<SyntaxTrivia> ();
@@ -169,8 +162,8 @@ namespace mellite {
 			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
 
 			// Create the actual attribute and add it to the list returned
-			returnNodes.Add (CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
-			return returnNodes;
+			createdAttributes.Add (CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
+			return createdAttributes;
 		}
 
 		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
