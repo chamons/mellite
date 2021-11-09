@@ -71,21 +71,21 @@ namespace mellite {
 			// Each attribute will need indentTrivia to be tabbed over enough
 			var leading = new List<SyntaxTrivia> ();
 			leading.AddRange (info.NewlineTrivia);
-			leading.AddRange (SyntaxFactory.ParseLeadingTrivia ("#if NET"));
-			leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			leading.AddRange (TriviaConstants.IfNet);
+			leading.AddRange (TriviaConstants.Newline);
 			leading.AddRange (info.IndentTrivia);
 
 			var trailing = new List<SyntaxTrivia> ();
-			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
-			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#else"));
-			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			trailing.AddRange (TriviaConstants.Newline);
+			trailing.AddRange (TriviaConstants.Else);
+			trailing.AddRange (TriviaConstants.Newline);
 
 			foreach (var attribute in info.ExistingAttributes) {
 				trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
-				trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+				trailing.AddRange (TriviaConstants.Newline);
 			}
-			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("#endif"));
-			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			trailing.AddRange (TriviaConstants.EndIf);
+			trailing.AddRange (TriviaConstants.Newline);
 
 			for (int i = 0; i < createdAttributes.Count; i += 1) {
 				var attribute = createdAttributes [i];
@@ -122,7 +122,7 @@ namespace mellite {
 				}
 				// Add newline at end of all but last
 				if (i != nodes.Count - 1) {
-					attribute = attribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+					attribute = attribute.WithTrailingTrivia (TriviaConstants.Newline);
 				}
 				createdAttributes.Add (attribute);
 			}
@@ -147,9 +147,9 @@ namespace mellite {
 			for (int i = 0; i < nodes.Count; i++) {
 				var node = nodes [i];
 				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
-				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+				leading.AddRange (TriviaConstants.Newline);
 				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
-				leading.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+				leading.AddRange (TriviaConstants.Newline);
 				if (i != nodes.Count - 1) {
 					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
 				}
@@ -158,7 +158,7 @@ namespace mellite {
 
 			// Generate #endif after attribute
 			var trailing = new List<SyntaxTrivia> ();
-			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
+			trailing.AddRange (TriviaConstants.Newline);
 			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
 
 			// Create the actual attribute and add it to the list returned
@@ -175,7 +175,7 @@ namespace mellite {
 				if (newNode != null) {
 					var newAttribute = newNode.ToAttributeList ();
 					if (i != info.IntroducedAttributesToProcess.Count - 1) {
-						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (info.IndentTrivia));
+						newAttribute = newAttribute.WithTrailingTrivia (TriviaConstants.Newline.AddRange (info.IndentTrivia));
 					}
 					createdAttributes.Add (newAttribute);
 				}
