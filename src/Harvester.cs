@@ -83,13 +83,13 @@ namespace mellite {
 
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
 			// as the #if define in the block is a superset of others and must come last
-			ForceAnyiOSToEndOfList (deprecatedAttributesToProcess);
-			ForceAnyiOSToEndOfList (obsoleteAttributesToProcess);
+			ForceiOSToEndOfList (deprecatedAttributesToProcess);
+			ForceiOSToEndOfList (obsoleteAttributesToProcess);
 
 			return new HarvestedMemberInfo (existingAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
 		}
 
-		static void ForceAnyiOSToEndOfList (List<AttributeSyntax> nodes)
+		static void ForceiOSToEndOfList (List<AttributeSyntax> nodes)
 		{
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess
 			// as the #if define is a superset of others and must come last
