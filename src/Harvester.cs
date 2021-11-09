@@ -1,30 +1,37 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Text;
-using System.Linq;
+using System.Collections.ObjectModel;
 
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace mellite {
 	public class HarvestedMemberInfo {
-		public List<AttributeListSyntax> CreatedAttributes = new List<AttributeListSyntax> ();
-		public List<AttributeSyntax> ExistingAttributes = new List<AttributeSyntax> ();
+		public ReadOnlyCollection<AttributeSyntax> ExistingAttributes;
 
-		public List<AttributeSyntax> DeprecatedAttributesToProcess = new List<AttributeSyntax> ();
-		public List<AttributeSyntax> IntroducedAttributesToProcess = new List<AttributeSyntax> ();
+		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
+		public ReadOnlyCollection<AttributeSyntax> IntroducedAttributesToProcess;
 
-		public SyntaxTriviaList NewlineTrivia = new SyntaxTriviaList ();
-		public SyntaxTriviaList IndentTrivia = new SyntaxTriviaList ();
+		public SyntaxTriviaList NewlineTrivia;
+		public SyntaxTriviaList IndentTrivia;
+
+		public HarvestedMemberInfo (List<AttributeSyntax> existingAttributes, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> introducedAttributesToProcess, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		{
+			ExistingAttributes = existingAttributes.AsReadOnly ();
+			DeprecatedAttributesToProcess = deprecatedAttributesToProcess.AsReadOnly ();
+			IntroducedAttributesToProcess = introducedAttributesToProcess.AsReadOnly ();
+			NewlineTrivia = newlineTrivia ?? new SyntaxTriviaList ();
+			IndentTrivia = indentTrivia ?? new SyntaxTriviaList ();
+		}
 	}
 
 	// Harvest information from a given Roslyn node for later conversion
 	public static class Harvester {
 		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member)
 		{
-			HarvestedMemberInfo info = new HarvestedMemberInfo ();
+			var existingAttributes = new List<AttributeSyntax> ();
+			var introducedAttributesToProcess = new List<AttributeSyntax> ();
+			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
 
 			SyntaxTriviaList? newlineTrivia = null;
 			SyntaxTriviaList? indentTrivia = null;
@@ -36,13 +43,13 @@ namespace mellite {
 				foreach (var attribute in attributeList.Attributes) {
 					switch (attribute.Name.ToString ()) {
 					case "Introduced": {
-						info.IntroducedAttributesToProcess.Add (attribute);
-						info.ExistingAttributes.Add (attribute);
+						introducedAttributesToProcess.Add (attribute);
+						existingAttributes.Add (attribute);
 						break;
 					}
 					case "Deprecated": {
-						info.DeprecatedAttributesToProcess.Add (attribute);
-						info.ExistingAttributes.Add (attribute);
+						deprecatedAttributesToProcess.Add (attribute);
+						existingAttributes.Add (attribute);
 						break;
 					}
 					case "AttributeUsage":
@@ -55,13 +62,17 @@ namespace mellite {
 					}
 				}
 			}
-			if (newlineTrivia != null) {
-				info.NewlineTrivia = (SyntaxTriviaList) newlineTrivia;
+
+			// We must sort IOS to be the last element in deprecatedAttributesToProcess
+			// as the #if define is a superset of others and must come last
+			int iOSDeprecationIndex = deprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
+			if (iOSDeprecationIndex != -1) {
+				var deprecationElement = deprecatedAttributesToProcess [iOSDeprecationIndex];
+				deprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
+				deprecatedAttributesToProcess.Add (deprecationElement);
 			}
-			if (indentTrivia != null) {
-				info.IndentTrivia = (SyntaxTriviaList) indentTrivia;
-			}
-			return info;
+
+			return new HarvestedMemberInfo (existingAttributes, deprecatedAttributesToProcess, introducedAttributesToProcess, newlineTrivia, indentTrivia);
 		}
 
 		// In this example:

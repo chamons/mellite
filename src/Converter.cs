@@ -49,13 +49,14 @@ namespace mellite {
 		{
 			HarvestedMemberInfo info = Harvester.Process (member);
 
-			ProcessIntroduced (info);
-			ProcessDeprecated (info);
+			var createdAttributes = new List<AttributeListSyntax> ();
+			createdAttributes.AddRange (ProcessIntroduced (info));
+			createdAttributes.AddRange (ProcessDeprecated (info));
 
-			return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info)));
+			return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info, createdAttributes)));
 		}
 
-		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info)
+		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info, List<AttributeListSyntax> createdAttributes)
 		{
 			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 
@@ -86,13 +87,13 @@ namespace mellite {
 			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("#endif"));
 			trailing.AddRange (SyntaxFactory.ParseTrailingTrivia ("\r\n"));
 
-			for (int i = 0; i < info.CreatedAttributes.Count; i += 1) {
-				var attribute = info.CreatedAttributes [i];
+			for (int i = 0; i < createdAttributes.Count; i += 1) {
+				var attribute = createdAttributes [i];
 
 				if (i == 0) {
 					attribute = attribute.WithLeadingTrivia (attribute.GetLeadingTrivia ().AddRange (leading));
 				}
-				if (i == info.CreatedAttributes.Count - 1) {
+				if (i == createdAttributes.Count - 1) {
 					attribute = attribute.WithTrailingTrivia (attribute.GetTrailingTrivia ().AddRange (trailing));
 				}
 				finalAttributes.Add (attribute);
@@ -101,68 +102,15 @@ namespace mellite {
 			return finalAttributes;
 		}
 
-		void ProcessDeprecated (HarvestedMemberInfo info)
+		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
 		{
-			// We must sort IOS to be the last element in deprecatedAttributesToProcess
-			// as the #if define is a superset of others and must come last
-			int iOSDeprecationIndex = info.DeprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
-			if (iOSDeprecationIndex != -1) {
-				var deprecationElement = info.DeprecatedAttributesToProcess [iOSDeprecationIndex];
-				info.DeprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
-				info.DeprecatedAttributesToProcess.Add (deprecationElement);
-			}
 			if (info.DeprecatedAttributesToProcess.Count > 0) {
-				foreach (var newNode in ProcessDeprecatedNode (info.DeprecatedAttributesToProcess, info.IndentTrivia)) {
-					info.CreatedAttributes.Add (newNode);
-				}
+				return ProcessDeprecatedNode (info.DeprecatedAttributesToProcess, info.IndentTrivia);
 			}
+			return new List<AttributeListSyntax> ();
 		}
 
-		void ProcessIntroduced (HarvestedMemberInfo info)
-		{
-			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
-				var attribute = info.IntroducedAttributesToProcess [i];
-				var newNode = ProcessSupportedAvailabilityNode (attribute);
-				if (newNode != null) {
-					var newAttribute = newNode.ToAttributeList ();
-					if (i != info.IntroducedAttributesToProcess.Count - 1) {
-						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (info.IndentTrivia));
-					}
-					info.CreatedAttributes.Add (newAttribute);
-				}
-			}
-		}
-
-		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)
-		{
-			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
-			if (platform != null) {
-				var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
-				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
-				// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
-				return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("SupportedOSPlatform"), args);
-			}
-			return null;
-		}
-
-		AttributeSyntax? ProcessUnsupportedAvailabilityNode (AttributeSyntax node)
-		{
-			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
-			if (platform != null) {
-				if (node.ArgumentList.Arguments.Count > 0) {
-					var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
-					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
-					// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
-					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
-				} else {
-					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}\")");
-					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
-				}
-			}
-			return null;
-		}
-
-		List<AttributeListSyntax> ProcessDeprecatedNode (List<AttributeSyntax> nodes, SyntaxTriviaList? indentTrivia)
+		List<AttributeListSyntax> ProcessDeprecatedNode (IList<AttributeSyntax> nodes, SyntaxTriviaList? indentTrivia)
 		{
 			var returnNodes = new List<AttributeListSyntax> ();
 
@@ -223,6 +171,52 @@ namespace mellite {
 			// Create the actual attribute and add it to the list returned
 			returnNodes.Add (CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
 			return returnNodes;
+		}
+
+		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
+		{
+			var createdAttributes = new List<AttributeListSyntax> ();
+			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
+				var attribute = info.IntroducedAttributesToProcess [i];
+				var newNode = ProcessSupportedAvailabilityNode (attribute);
+				if (newNode != null) {
+					var newAttribute = newNode.ToAttributeList ();
+					if (i != info.IntroducedAttributesToProcess.Count - 1) {
+						newAttribute = newAttribute.WithTrailingTrivia (SyntaxFactory.ParseTrailingTrivia ("\r\n").AddRange (info.IndentTrivia));
+					}
+					createdAttributes.Add (newAttribute);
+				}
+			}
+			return createdAttributes;
+		}
+
+		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)
+		{
+			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+			if (platform != null) {
+				var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
+				// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
+				return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("SupportedOSPlatform"), args);
+			}
+			return null;
+		}
+
+		AttributeSyntax? ProcessUnsupportedAvailabilityNode (AttributeSyntax node)
+		{
+			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+			if (platform != null) {
+				if (node.ArgumentList.Arguments.Count > 0) {
+					var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
+					// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
+					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
+				} else {
+					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}\")");
+					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
+				}
+			}
+			return null;
 		}
 
 		AttributeSyntax CreateObsoleteAttribute (AttributeSyntax node)
