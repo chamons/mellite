@@ -81,16 +81,24 @@ namespace mellite {
 				}
 			}
 
-			// We must sort IOS to be the last element in deprecatedAttributesToProcess
-			// as the #if define is a superset of others and must come last
-			int iOSDeprecationIndex = deprecatedAttributesToProcess.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
-			if (iOSDeprecationIndex != -1) {
-				var deprecationElement = deprecatedAttributesToProcess [iOSDeprecationIndex];
-				deprecatedAttributesToProcess.RemoveAt (iOSDeprecationIndex);
-				deprecatedAttributesToProcess.Add (deprecationElement);
-			}
+			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
+			// as the #if define in the block is a superset of others and must come last
+			ForceAnyiOSToEndOfList (deprecatedAttributesToProcess);
+			ForceAnyiOSToEndOfList (obsoleteAttributesToProcess);
 
 			return new HarvestedMemberInfo (existingAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
+		}
+
+		static void ForceAnyiOSToEndOfList (List<AttributeSyntax> nodes)
+		{
+			// We must sort IOS to be the last element in deprecatedAttributesToProcess
+			// as the #if define is a superset of others and must come last
+			int iOSDeprecationIndex = nodes.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
+			if (iOSDeprecationIndex != -1) {
+				var deprecationElement = nodes [iOSDeprecationIndex];
+				nodes.RemoveAt (iOSDeprecationIndex);
+				nodes.Add (deprecationElement);
+			}
 		}
 
 		// In this example:

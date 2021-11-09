@@ -157,20 +157,20 @@ namespace binding
 #endif", newAttributeSpaceCount: 0);
 
 			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
-        [Obsolete (PlatformName.MacOSX, 11, 0)]", @"#if IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
-#elif MONOMAC
+        [Obsolete (PlatformName.MacOSX, 11, 0)]", @"#if MONOMAC
         [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
 			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
         [Obsolete (PlatformName.MacOSX, 11, 0)]
-        [Obsolete (PlatformName.TvOS, 11, 0)]", @"#if IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
-#elif MONOMAC
+        [Obsolete (PlatformName.TvOS, 11, 0)]", @"#if MONOMAC
         [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
         [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 		}
 
