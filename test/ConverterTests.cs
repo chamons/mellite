@@ -84,7 +84,7 @@ namespace binding
 		}
 
 		[Fact]
-		public void SingleAttributeOnMethod ()
+		public void Introduced ()
 		{
 			TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)]", "[SupportedOSPlatform (\"macos10.0\")]");
 			TestMethodAttributeConversion ("[Introduced (PlatformName.iOS, 6, 0)]", "[SupportedOSPlatform (\"ios6.0\")]");
@@ -104,7 +104,7 @@ namespace binding
 		}
 
 		[Fact]
-		public void TestDeprecated ()
+		public void Deprecated ()
 		{
 			TestMethodAttributeConversion ("[Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform (""ios11.0"")]
 #if IOS
@@ -148,6 +148,31 @@ namespace binding
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.WatchOS, 11, 0)]");
+		}
+
+		[Fact]
+		public void Obsolete ()
+		{
+			TestMethodAttributeConversion ("[Obsolete (PlatformName.iOS, 11, 0)]", @"");
+			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
+        [Obsolete (PlatformName.MacOSX, 11, 0)]", @"");
+			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
+        [Obsolete (PlatformName.MacOSX, 11, 0)]
+        [Obsolete (PlatformName.TvOS, 11, 0)]", @"");
+		}
+
+		[Fact]
+		public void Unavailable ()
+		{
+			TestMethodAttributeConversion ("[Unavailable (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform (""ios11.0"")]");
+			TestMethodAttributeConversion (@"[Unavailable (PlatformName.iOS, 11, 0)]
+        [Unavailable (PlatformName.MacOSX, 11, 0)]", @"[UnsupportedOSPlatform (""ios11.0"")]
+        [UnsupportedOSPlatform (""macos11.0"")]");
+			TestMethodAttributeConversion (@"[Unavailable (PlatformName.iOS, 11, 0)]
+        [Unavailable (PlatformName.MacOSX, 11, 0)]
+        [Unavailable (PlatformName.TvOS, 11, 0)]", @"[UnsupportedOSPlatform (""ios11.0"")]
+        [UnsupportedOSPlatform (""macos11.0"")]
+        [UnsupportedOSPlatform (""tvos11.0"")]");
 		}
 
 		// Final smoke test of all base attributes

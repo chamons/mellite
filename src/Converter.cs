@@ -45,6 +45,7 @@ namespace mellite {
 			return null;
 		}
 
+		// An example of desired behavior - https://github.com/xamarin/xamarin-macios/blob/main/src/AudioUnit/AudioComponentDescription.cs#L166
 		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member)
 		{
 			HarvestedMemberInfo info = Harvester.Process (member);
@@ -52,8 +53,124 @@ namespace mellite {
 			var createdAttributes = new List<AttributeListSyntax> ();
 			createdAttributes.AddRange (ProcessIntroduced (info));
 			createdAttributes.AddRange (ProcessDeprecated (info));
+			createdAttributes.AddRange (ProcessUnavailable (info));
+			createdAttributes.AddRange (ProcessObsolete (info));
 
 			return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info, createdAttributes)));
+		}
+
+		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
+		{
+			if (info.DeprecatedAttributesToProcess.Count == 0) {
+				return new List<AttributeListSyntax> ();
+			}
+			var createdAttributes = new List<AttributeListSyntax> ();
+
+			List<AttributeSyntax> nodes = FilterNonNET6Platforms (info.DeprecatedAttributesToProcess);
+
+			// Add all of the deprecated as unsupported in net6
+			createdAttributes.AddRange (AddAllAsUnsupported (info, nodes));
+			createdAttributes.AddRange (AddConditionalObsoleteGrid (info, nodes));
+			return createdAttributes;
+		}
+
+		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
+		{
+			if (info.IntroducedAttributesToProcess.Count == 0) {
+				return new List<AttributeListSyntax> ();
+			}
+			var createdAttributes = new List<AttributeListSyntax> ();
+			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
+				var attribute = info.IntroducedAttributesToProcess [i];
+				var newNode = ProcessSupportedAvailabilityNode (attribute);
+				if (newNode != null) {
+					var newAttribute = newNode.ToAttributeList ();
+					if (i != info.IntroducedAttributesToProcess.Count - 1) {
+						newAttribute = newAttribute.WithTrailingTrivia (TriviaConstants.Newline.AddRange (info.IndentTrivia));
+					}
+					createdAttributes.Add (newAttribute);
+				}
+			}
+			return createdAttributes;
+		}
+
+		List<AttributeListSyntax> ProcessUnavailable (HarvestedMemberInfo info)
+		{
+			if (info.UnavailableAttributesToProcess.Count == 0) {
+				return new List<AttributeListSyntax> ();
+			}
+			return AddAllAsUnsupported (info, FilterNonNET6Platforms (info.UnavailableAttributesToProcess));
+		}
+
+		List<AttributeListSyntax> ProcessObsolete (HarvestedMemberInfo info)
+		{
+			if (info.ObsoleteAttributesToProcess.Count == 0) {
+				return new List<AttributeListSyntax> ();
+			}
+			return AddConditionalObsoleteGrid (info, FilterNonNET6Platforms (info.ObsoleteAttributesToProcess));
+		}
+
+		List<AttributeListSyntax> AddConditionalObsoleteGrid (HarvestedMemberInfo info, List<AttributeSyntax> nodes)
+		{
+			// Now build up with super attribute like this:
+			// #if __MACCATALYST__
+			// [Obsolete ("Starting with maccatalyst$5.$6 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #elif IOS
+			// [Obsolete ("Starting with ios$1.$2 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #elif TVOS
+			// [Obsolete ("Starting with tvos$3.$4 $11' instead.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #elif MONOMAC
+			// [Obsolete ("Starting with macos$7.$8 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
+			// #endif
+			// So in order of platform listed:
+			// Generate ''#if define' then Obsolete for first element, '#elif define' then Obsolete for all but last
+			// Attach ^ to last attribute as 
+
+			// Generate #if block with disabled attributes, skipping the last attribute which this will be attached to
+			var leading = new List<SyntaxTrivia> ();
+
+			for (int i = 0; i < nodes.Count; i++) {
+				var node = nodes [i];
+				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
+				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
+				leading.AddRange (TriviaConstants.Newline);
+				if (i != nodes.Count - 1) {
+					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
+				}
+			}
+			leading.AddRange (info.IndentTrivia);
+
+			// Generate #endif after attribute
+			var trailing = new List<SyntaxTrivia> ();
+			trailing.AddRange (TriviaConstants.Newline);
+			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
+
+			// Create the actual attribute and add it to the list returned
+			var finalAttribute = CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing);
+			return new List<AttributeListSyntax> { finalAttribute };
+		}
+
+		List<AttributeListSyntax> AddAllAsUnsupported (HarvestedMemberInfo info, List<AttributeSyntax> nodes)
+		{
+			var createdAttributes = new List<AttributeListSyntax> ();
+
+			for (int i = 0; i < nodes.Count; i++) {
+				var unsupported = ProcessUnsupportedAvailabilityNode (nodes [i])!;
+				AttributeListSyntax attribute = unsupported.ToAttributeList ();
+				// Indent if not first
+				if (i != 0) {
+					attribute = attribute.WithLeadingTrivia (info.IndentTrivia);
+				}
+				attribute = attribute.WithTrailingTrivia (TriviaConstants.Newline);
+				createdAttributes.Add (attribute);
+			}
+			return createdAttributes;
+		}
+
+		// Filter any attributes that don't line up on NET6, such as watch first
+		List<AttributeSyntax> FilterNonNET6Platforms (IList<AttributeSyntax> nodes)
+		{
+			return nodes.Where (n => PlatformArgumentParser.ParseDefine (n.ArgumentList!.Arguments [0].ToString ()) != null).ToList ();
 		}
 
 		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info, List<AttributeListSyntax> createdAttributes)
@@ -91,7 +208,9 @@ namespace mellite {
 				var attribute = createdAttributes [i];
 
 				if (i == 0) {
-					attribute = attribute.WithLeadingTrivia (attribute.GetLeadingTrivia ().AddRange (leading));
+					// This order matters in some cases, but not in the trailing case
+					leading.AddRange (attribute.GetLeadingTrivia ());
+					attribute = attribute.WithLeadingTrivia (leading);
 				}
 				if (i == createdAttributes.Count - 1) {
 					attribute = attribute.WithTrailingTrivia (attribute.GetTrailingTrivia ().AddRange (trailing));
@@ -100,87 +219,6 @@ namespace mellite {
 			}
 
 			return finalAttributes;
-		}
-
-		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
-		{
-			if (info.DeprecatedAttributesToProcess.Count == 0) {
-				return new List<AttributeListSyntax> ();
-			}
-			var createdAttributes = new List<AttributeListSyntax> ();
-
-			// Filter any attributes that don't line up on NET6, such as watch first
-			var nodes = info.DeprecatedAttributesToProcess.Where (n => PlatformArgumentParser.ParseDefine (n.ArgumentList!.Arguments [0].ToString ()) != null).ToList ();
-
-			// Add all of the deprecated as unsupported in net6
-			for (int i = 0; i < nodes.Count; i++) {
-				var unsupported = ProcessUnsupportedAvailabilityNode (nodes [i])!;
-				AttributeListSyntax attribute = unsupported.ToAttributeList ();
-				// Indent if not first
-				if (i != 0) {
-					attribute = attribute.WithLeadingTrivia (info.IndentTrivia);
-				}
-				// Add newline at end of all but last
-				if (i != nodes.Count - 1) {
-					attribute = attribute.WithTrailingTrivia (TriviaConstants.Newline);
-				}
-				createdAttributes.Add (attribute);
-			}
-
-			// Now build up with super attribute like this:
-			// #if __MACCATALYST__
-			// [Obsolete ("Starting with maccatalyst$5.$6 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
-			// #elif IOS
-			// [Obsolete ("Starting with ios$1.$2 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
-			// #elif TVOS
-			// [Obsolete ("Starting with tvos$3.$4 $11' instead.", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
-			// #elif MONOMAC
-			// [Obsolete ("Starting with macos$7.$8 $11", DiagnosticId = "BI1234", UrlFormat = "https://github.com/xamarin/xamarin-macios/wiki/Obsolete")]
-			// #endif
-			// So in order of platform listed:
-			// Generate ''#if define' then Obsolete for first element, '#elif define' then Obsolete for all but last
-			// Attach ^ to last attribute as 
-
-			// Generate #if block with disabled attributes, skipping the last attribute which this will be attached to
-			var leading = new List<SyntaxTrivia> ();
-
-			for (int i = 0; i < nodes.Count; i++) {
-				var node = nodes [i];
-				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
-				leading.AddRange (TriviaConstants.Newline);
-				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
-				leading.AddRange (TriviaConstants.Newline);
-				if (i != nodes.Count - 1) {
-					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
-				}
-			}
-			leading.AddRange (info.IndentTrivia);
-
-			// Generate #endif after attribute
-			var trailing = new List<SyntaxTrivia> ();
-			trailing.AddRange (TriviaConstants.Newline);
-			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
-
-			// Create the actual attribute and add it to the list returned
-			createdAttributes.Add (CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing));
-			return createdAttributes;
-		}
-
-		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
-		{
-			var createdAttributes = new List<AttributeListSyntax> ();
-			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
-				var attribute = info.IntroducedAttributesToProcess [i];
-				var newNode = ProcessSupportedAvailabilityNode (attribute);
-				if (newNode != null) {
-					var newAttribute = newNode.ToAttributeList ();
-					if (i != info.IntroducedAttributesToProcess.Count - 1) {
-						newAttribute = newAttribute.WithTrailingTrivia (TriviaConstants.Newline.AddRange (info.IndentTrivia));
-					}
-					createdAttributes.Add (newAttribute);
-				}
-			}
-			return createdAttributes;
 		}
 
 		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)

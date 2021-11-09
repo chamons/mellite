@@ -9,17 +9,23 @@ namespace mellite {
 	public class HarvestedMemberInfo {
 		public ReadOnlyCollection<AttributeSyntax> ExistingAttributes;
 
-		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> IntroducedAttributesToProcess;
+		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
+		public ReadOnlyCollection<AttributeSyntax> UnavailableAttributesToProcess;
+		public ReadOnlyCollection<AttributeSyntax> ObsoleteAttributesToProcess;
 
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<AttributeSyntax> existingAttributes, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> introducedAttributesToProcess, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		public HarvestedMemberInfo (List<AttributeSyntax> existingAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
 		{
 			ExistingAttributes = existingAttributes.AsReadOnly ();
-			DeprecatedAttributesToProcess = deprecatedAttributesToProcess.AsReadOnly ();
+
 			IntroducedAttributesToProcess = introducedAttributesToProcess.AsReadOnly ();
+			DeprecatedAttributesToProcess = deprecatedAttributesToProcess.AsReadOnly ();
+			UnavailableAttributesToProcess = unavailableAttributesToProcess.AsReadOnly ();
+			ObsoleteAttributesToProcess = obsoleteAttributesToProcess.AsReadOnly ();
+
 			NewlineTrivia = newlineTrivia ?? new SyntaxTriviaList ();
 			IndentTrivia = indentTrivia ?? new SyntaxTriviaList ();
 		}
@@ -32,6 +38,8 @@ namespace mellite {
 			var existingAttributes = new List<AttributeSyntax> ();
 			var introducedAttributesToProcess = new List<AttributeSyntax> ();
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
+			var unavailableAttributesToProcess = new List<AttributeSyntax> ();
+			var obsoleteAttributesToProcess = new List<AttributeSyntax> ();
 
 			SyntaxTriviaList? newlineTrivia = null;
 			SyntaxTriviaList? indentTrivia = null;
@@ -49,6 +57,16 @@ namespace mellite {
 					}
 					case "Deprecated": {
 						deprecatedAttributesToProcess.Add (attribute);
+						existingAttributes.Add (attribute);
+						break;
+					}
+					case "Unavailable": {
+						unavailableAttributesToProcess.Add (attribute);
+						existingAttributes.Add (attribute);
+						break;
+					}
+					case "Obsolete": {
+						obsoleteAttributesToProcess.Add (attribute);
 						existingAttributes.Add (attribute);
 						break;
 					}
@@ -72,7 +90,7 @@ namespace mellite {
 				deprecatedAttributesToProcess.Add (deprecationElement);
 			}
 
-			return new HarvestedMemberInfo (existingAttributes, deprecatedAttributesToProcess, introducedAttributesToProcess, newlineTrivia, indentTrivia);
+			return new HarvestedMemberInfo (existingAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
 		}
 
 		// In this example:
