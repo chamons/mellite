@@ -51,6 +51,8 @@ namespace mellite {
 			HarvestedMemberInfo info = Harvester.Process (member);
 
 			var createdAttributes = new List<AttributeListSyntax> ();
+			// Some general rules for trivia in created nodes
+			// Assume you are at the beginning (not indented) of a line and leave a newline when completed with your section (no indend)
 			createdAttributes.AddRange (ProcessIntroduced (info));
 			createdAttributes.AddRange (ProcessDeprecated (info));
 			createdAttributes.AddRange (ProcessUnavailable (info));
@@ -84,10 +86,7 @@ namespace mellite {
 				var attribute = info.IntroducedAttributesToProcess [i];
 				var newNode = ProcessSupportedAvailabilityNode (attribute);
 				if (newNode != null) {
-					var newAttribute = newNode.ToAttributeList ();
-					if (i != info.IntroducedAttributesToProcess.Count - 1) {
-						newAttribute = newAttribute.WithTrailingTrivia (TriviaConstants.Newline.AddRange (info.IndentTrivia));
-					}
+					var newAttribute = newNode.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline);
 					createdAttributes.Add (newAttribute);
 				}
 			}
@@ -136,6 +135,7 @@ namespace mellite {
 				leading.AddRange (TriviaConstants.Newline);
 				if (i != nodes.Count - 1) {
 					leading.Add (SyntaxFactory.DisabledText (CreateObsoleteAttribute (node).ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
+					leading.AddRange (TriviaConstants.Newline);
 				}
 			}
 			leading.AddRange (info.IndentTrivia);
@@ -143,7 +143,8 @@ namespace mellite {
 			// Generate #endif after attribute
 			var trailing = new List<SyntaxTrivia> ();
 			trailing.AddRange (TriviaConstants.Newline);
-			trailing.AddRange (SyntaxFactory.ParseLeadingTrivia ("#endif"));
+			trailing.AddRange (TriviaConstants.EndIf);
+			trailing.AddRange (TriviaConstants.Newline);
 
 			// Create the actual attribute and add it to the list returned
 			var finalAttribute = CreateObsoleteAttribute (nodes.Last ()).ToAttributeList ().WithLeadingTrivia (leading).WithTrailingTrivia (trailing);
@@ -156,13 +157,7 @@ namespace mellite {
 
 			for (int i = 0; i < nodes.Count; i++) {
 				var unsupported = ProcessUnsupportedAvailabilityNode (nodes [i])!;
-				AttributeListSyntax attribute = unsupported.ToAttributeList ();
-				// Indent if not first
-				if (i != 0) {
-					attribute = attribute.WithLeadingTrivia (info.IndentTrivia);
-				}
-				attribute = attribute.WithTrailingTrivia (TriviaConstants.Newline);
-				createdAttributes.Add (attribute);
+				createdAttributes.Add (unsupported.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline));
 			}
 			return createdAttributes;
 		}
@@ -190,14 +185,14 @@ namespace mellite {
 			leading.AddRange (info.NewlineTrivia);
 			leading.AddRange (TriviaConstants.IfNet);
 			leading.AddRange (TriviaConstants.Newline);
-			leading.AddRange (info.IndentTrivia);
 
 			var trailing = new List<SyntaxTrivia> ();
-			trailing.AddRange (TriviaConstants.Newline);
 			trailing.AddRange (TriviaConstants.Else);
 			trailing.AddRange (TriviaConstants.Newline);
 
 			foreach (var attribute in info.ExistingAttributes) {
+				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
+				// So add info.IndentTrivia here by hand
 				trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
 				trailing.AddRange (TriviaConstants.Newline);
 			}

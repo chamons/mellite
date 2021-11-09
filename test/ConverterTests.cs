@@ -4,13 +4,13 @@ using Xunit;
 
 namespace mellite.tests {
 	public class ConverterTests {
-		string GetConditionalAttributeBlock (string xamarinAttribute, string newAttribute, int spaceCount)
+		string GetConditionalAttributeBlock (string xamarinAttribute, string newAttribute, int spaceCount, int? newAttributeSpaceCount = null)
 		{
-			var spaces = new String (' ', spaceCount);
+			newAttributeSpaceCount ??= spaceCount;
 			return $@"#if NET
-{spaces}{newAttribute}
+{new String (' ', (int) newAttributeSpaceCount)}{newAttribute}
 #else
-{spaces}{xamarinAttribute}
+{new String (' ', spaceCount)}{xamarinAttribute}
 #endif";
 
 		}
@@ -27,7 +27,6 @@ namespace binding
 		void TestConversion (string original, string expected)
 		{
 #if true
-			Console.WriteLine (original);
 			Console.WriteLine (Converter.ConvertText (original));
 			Console.WriteLine (expected);
 #endif
@@ -68,7 +67,7 @@ namespace binding
     [SupportedOSPlatform (""maccatalyst10.0"")]");
 		}
 
-		void TestMethodAttributeConversion (string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
+		void TestMethodAttributeConversion (string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null, int? newAttributeSpaceCount = null)
 		{
 			string body = @"    public partial class Class1
     {{
@@ -79,7 +78,7 @@ namespace binding
     }}";
 			xamarinAttributeAfterConvert ??= xamarinAttribute;
 			var original = GetTestProgram (string.Format (body, "        " + xamarinAttribute));
-			var expected = GetTestProgram (string.Format (body, GetConditionalAttributeBlock (xamarinAttributeAfterConvert, newAttribute, 8)));
+			var expected = GetTestProgram (string.Format (body, GetConditionalAttributeBlock (xamarinAttributeAfterConvert, newAttribute, 8, newAttributeSpaceCount)));
 			TestConversion (original, expected);
 		}
 
@@ -153,12 +152,26 @@ namespace binding
 		[Fact]
 		public void Obsolete ()
 		{
-			TestMethodAttributeConversion ("[Obsolete (PlatformName.iOS, 11, 0)]", @"");
+			TestMethodAttributeConversion ("[Obsolete (PlatformName.iOS, 11, 0)]", @"#if IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif", newAttributeSpaceCount: 0);
+
 			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
-        [Obsolete (PlatformName.MacOSX, 11, 0)]", @"");
+        [Obsolete (PlatformName.MacOSX, 11, 0)]", @"#if IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif MONOMAC
+        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif", newAttributeSpaceCount: 0);
+
 			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
         [Obsolete (PlatformName.MacOSX, 11, 0)]
-        [Obsolete (PlatformName.TvOS, 11, 0)]", @"");
+        [Obsolete (PlatformName.TvOS, 11, 0)]", @"#if IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif MONOMAC
+        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif TVOS
+        [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif", newAttributeSpaceCount: 0);
 		}
 
 		[Fact]
