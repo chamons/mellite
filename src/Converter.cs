@@ -178,6 +178,12 @@ namespace mellite {
 		{
 			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 
+			foreach (var attribute in info.NonAvailabilityAttributes) {
+				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
+				// So add info.IndentTrivia here by hand
+				finalAttributes.Add (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline));
+			}
+
 			// We want to generate:
 			// #if NET
 			// CONVERTED_ATTRIBUTES
@@ -196,7 +202,7 @@ namespace mellite {
 			trailing.AddRange (TriviaConstants.Else);
 			trailing.AddRange (TriviaConstants.Newline);
 
-			foreach (var attribute in info.ExistingAttributes) {
+			foreach (var attribute in info.ExistingAvailabilityAttributes) {
 				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
 				// So add info.IndentTrivia here by hand
 				trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));

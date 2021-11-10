@@ -82,6 +82,19 @@ namespace binding
 			TestConversion (original, expected);
 		}
 
+		void TestMethodAttributeConversionToFinal (string xamarinAttribute, string expected)
+		{
+			string body = @"    public partial class Class1
+    {{
+{0}
+        public void Foo () {{}}
+
+        public void Bar () {{}}
+    }}";
+			var original = GetTestProgram (string.Format (body, "        " + xamarinAttribute));
+			TestConversion (original, expected);
+		}
+
 		[Fact]
 		public void Introduced ()
 		{
@@ -152,20 +165,20 @@ namespace binding
 		[Fact]
 		public void Obsolete ()
 		{
-			TestMethodAttributeConversion ("[Obsolete (PlatformName.iOS, 11, 0)]", @"#if IOS
+			TestMethodAttributeConversion ("[Obsoleted (PlatformName.iOS, 11, 0)]", @"#if IOS
         [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
-			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
-        [Obsolete (PlatformName.MacOSX, 11, 0)]", @"#if MONOMAC
+			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
+        [Obsoleted (PlatformName.MacOSX, 11, 0)]", @"#if MONOMAC
         [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
         [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
-			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
-        [Obsolete (PlatformName.MacOSX, 11, 0)]
-        [Obsolete (PlatformName.TvOS, 11, 0)]", @"#if MONOMAC
+			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
+        [Obsoleted (PlatformName.MacOSX, 11, 0)]
+        [Obsoleted (PlatformName.TvOS, 11, 0)]", @"#if MONOMAC
         [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
         [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
@@ -215,14 +228,14 @@ namespace binding
 		[Fact]
 		public void MergeDifferentIfBlocks ()
 		{
-			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
-        [Obsolete (PlatformName.MacCatalyst)]", @"#if __MACCATALYST__
+			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
+        [Obsoleted (PlatformName.MacCatalyst)]", @"#if __MACCATALYST__
         [Obsolete (""Starting with maccatalyst"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
         [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
-			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
+			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.MacCatalyst)]", @"[UnsupportedOSPlatform (""maccatalyst"")]
 #if __MACCATALYST__
         [Obsolete (""Starting with maccatalyst"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
@@ -232,13 +245,38 @@ namespace binding
 #endif");
 		}
 
+		[Fact]
+		public void IgnoreUnknownAttributes ()
+		{
+			TestMethodAttributeConversionToFinal ("[Flags][Obsolete][Unavailable (PlatformName.iOS, 11, 0)]", @"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+    public partial class Class1
+    {
+        [Flags]
+        [Obsolete]
+#if NET
+        [UnsupportedOSPlatform (""ios11.0"")]
+#else
+        [Unavailable (PlatformName.iOS, 11, 0)]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
+
 		// Final smoke test of all base attributes
 		[Fact]
 		public void TestAllAttributeKinds ()
 		{
 			TestMethodAttributeConversion (@"[Introduced (PlatformName.MacOSX, 10, 0)]
         [Deprecated (PlatformName.MacOSX, 11, 0)]
-        [Obsolete (PlatformName.iOS, 11, 0)]
+        [Obsoleted (PlatformName.iOS, 11, 0)]
         [Unavailable (PlatformName.MacCatalyst)]", @"[SupportedOSPlatform (""macos10.0"")]
         [UnsupportedOSPlatform (""macos11.0"")]
 #if MONOMAC
@@ -265,8 +303,7 @@ namespace binding
         [UnsupportedOSPlatform (""tvos"")]
         [UnsupportedOSPlatform (""maccatalyst"")]");
 
-			// 	TestMethodAttributeConversion (@"[Watch (11, 0)]
-			// [NoWatch]", "");
+			//TestMethodAttributeConversion (@"[Watch (11, 0)][NoWatch]", "");
 		}
 
 		[Fact]

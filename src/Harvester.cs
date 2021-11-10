@@ -7,7 +7,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace mellite {
 	public class HarvestedMemberInfo {
-		public ReadOnlyCollection<AttributeSyntax> ExistingAttributes;
+		public ReadOnlyCollection<AttributeSyntax> ExistingAvailabilityAttributes;
+		public ReadOnlyCollection<AttributeSyntax> NonAvailabilityAttributes;
 
 		public ReadOnlyCollection<AttributeSyntax> IntroducedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
@@ -17,9 +18,10 @@ namespace mellite {
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<AttributeSyntax> existingAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		public HarvestedMemberInfo (List<AttributeSyntax> existingAvailabilityAttributes, List<AttributeSyntax> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
 		{
-			ExistingAttributes = existingAttributes.AsReadOnly ();
+			ExistingAvailabilityAttributes = existingAvailabilityAttributes.AsReadOnly ();
+			NonAvailabilityAttributes = nonAvailabilityAttributes.AsReadOnly ();
 
 			IntroducedAttributesToProcess = introducedAttributesToProcess.AsReadOnly ();
 			DeprecatedAttributesToProcess = deprecatedAttributesToProcess.AsReadOnly ();
@@ -35,7 +37,9 @@ namespace mellite {
 	public static class Harvester {
 		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member)
 		{
-			var existingAttributes = new List<AttributeSyntax> ();
+			var existingAvailabilityAttributes = new List<AttributeSyntax> ();
+			var nonAvailabilityAttributes = new List<AttributeSyntax> ();
+
 			var introducedAttributesToProcess = new List<AttributeSyntax> ();
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
 			var unavailableAttributesToProcess = new List<AttributeSyntax> ();
@@ -57,12 +61,12 @@ namespace mellite {
 					case "Watch": // Will be later ignored
 					case "Introduced": {
 						introducedAttributesToProcess.Add (attribute);
-						existingAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
 					case "Deprecated": {
 						deprecatedAttributesToProcess.Add (attribute);
-						existingAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
 					case "NoMac":
@@ -72,18 +76,17 @@ namespace mellite {
 					case "NoWatch": // Will be later ignored
 					case "Unavailable": {
 						unavailableAttributesToProcess.Add (attribute);
-						existingAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
-					case "Obsolete": {
+					case "Obsoleted": {
 						obsoleteAttributesToProcess.Add (attribute);
-						existingAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
-					case "AttributeUsage": // HACK
-						break;
 					default:
-						throw new NotImplementedException ($"AttributeConverterVisitor came across mixed set of availability attributes and others: '{attribute.Name}'");
+						nonAvailabilityAttributes.Add (attribute);
+						break;
 					}
 				}
 			}
@@ -93,7 +96,7 @@ namespace mellite {
 			ForceiOSToEndOfList (deprecatedAttributesToProcess);
 			ForceiOSToEndOfList (obsoleteAttributesToProcess);
 
-			return new HarvestedMemberInfo (existingAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
+			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
 		}
 
 		static void ForceiOSToEndOfList (List<AttributeSyntax> nodes)

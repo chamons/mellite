@@ -1,5 +1,4 @@
-- Ignore (but keep) non-relevant attributes
-  - e.g. TestMethodAttributeConversion (@"[Watch (11, 0)][nowatch]", "");
+- Filtered attributes still need to be output for non-NET - //TestMethodAttributeConversion (@"[Watch (11, 0)][nowatch]", "");
 - iOS implies Catalyst
 - Handing child inherits parent
 - Correctly merging with existing
