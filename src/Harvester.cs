@@ -50,6 +50,11 @@ namespace mellite {
 
 				foreach (var attribute in attributeList.Attributes) {
 					switch (attribute.Name.ToString ()) {
+					case "Mac":
+					case "iOS":
+					case "TVAttribute":
+					case "MacCatalyst":
+					case "Watch": // Will be later ignored
 					case "Introduced": {
 						introducedAttributesToProcess.Add (attribute);
 						existingAttributes.Add (attribute);
@@ -60,16 +65,16 @@ namespace mellite {
 						existingAttributes.Add (attribute);
 						break;
 					}
+					case "NoMac":
+					case "NoiOS":
+					case "NoTVAttribute":
+					case "NoMacCatalyst":
+					case "NoWatch": // Will be later ignored
 					case "Unavailable": {
 						unavailableAttributesToProcess.Add (attribute);
 						existingAttributes.Add (attribute);
 						break;
 					}
-					case "NoMac":
-					case "NoiOS":
-					case "NoWatch":
-					case "NoTVAttribute":
-					case "NoMacCatalyst":
 					case "Obsolete": {
 						obsoleteAttributesToProcess.Add (attribute);
 						existingAttributes.Add (attribute);
@@ -95,7 +100,7 @@ namespace mellite {
 		{
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess
 			// as the #if define is a superset of others and must come last
-			int iOSDeprecationIndex = nodes.FindIndex (a => a.ArgumentList!.Arguments [0].ToString () == "PlatformName.iOS");
+			int iOSDeprecationIndex = nodes.FindIndex (a => PlatformArgumentParser.GetPlatformFromNode (a) == "ios");
 			if (iOSDeprecationIndex != -1) {
 				var deprecationElement = nodes [iOSDeprecationIndex];
 				nodes.RemoveAt (iOSDeprecationIndex);

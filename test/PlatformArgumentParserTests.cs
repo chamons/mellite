@@ -14,7 +14,7 @@ namespace mellite.tests {
 		[InlineData ("PlatformName.UIKitForMac", null)]
 		public void PlatformNameParsing (string platformName, string? netName)
 		{
-			Assert.Equal (netName, PlatformArgumentParser.Parse (platformName));
+			Assert.Equal (netName, PlatformArgumentParser.GetPlatformFromAttributeName (platformName));
 		}
 
 		[Theory]
@@ -27,7 +27,7 @@ namespace mellite.tests {
 		[InlineData ("PlatformName.UIKitForMac", null)]
 		public void PlatformDefineParsing (string platformName, string? netName)
 		{
-			Assert.Equal (netName, PlatformArgumentParser.ParseDefine (platformName));
+			Assert.Equal (netName, PlatformArgumentParser.GetDefineFromAttributeName (platformName));
 		}
 	}
 }

@@ -130,7 +130,7 @@ namespace mellite {
 
 			for (int i = 0; i < nodes.Count; i++) {
 				var node = nodes [i];
-				var define = PlatformArgumentParser.ParseDefine (node.ArgumentList!.Arguments [0].ToString ());
+				var define = PlatformArgumentParser.GetDefineFromNode (node);
 				leading.AddRange (SyntaxFactory.ParseLeadingTrivia ($"#{(i == 0 ? "if" : "elif")} {define}"));
 				leading.AddRange (TriviaConstants.Newline);
 				if (i != nodes.Count - 1) {
@@ -165,7 +165,7 @@ namespace mellite {
 		// Filter any attributes that don't line up on NET6, such as watch first
 		List<AttributeSyntax> FilterNonNET6Platforms (IList<AttributeSyntax> nodes)
 		{
-			return nodes.Where (n => PlatformArgumentParser.ParseDefine (n.ArgumentList!.Arguments [0].ToString ()) != null).ToList ();
+			return nodes.Where (n => PlatformArgumentParser.GetDefineFromNode (n) != null).ToList ();
 		}
 
 		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info, List<AttributeListSyntax> createdAttributes)
@@ -218,10 +218,9 @@ namespace mellite {
 
 		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)
 		{
-			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
 			if (platform != null) {
-				var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
-				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
+				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{GetVersionFromNode (node)}\")");
 				// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
 				return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("SupportedOSPlatform"), args);
 			}
@@ -230,10 +229,10 @@ namespace mellite {
 
 		AttributeSyntax? ProcessUnsupportedAvailabilityNode (AttributeSyntax node)
 		{
-			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
+			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
 			if (platform != null) {
-				if (node.ArgumentList.Arguments.Count > 0) {
-					var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+				if (node.ArgumentList?.Arguments.Count > 0) {
+					var version = GetVersionFromNode (node);
 					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
 					// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
 					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
@@ -247,13 +246,26 @@ namespace mellite {
 
 		AttributeSyntax CreateObsoleteAttribute (AttributeSyntax node)
 		{
-			var platform = PlatformArgumentParser.Parse (node.ArgumentList!.Arguments [0].ToString ());
-			var version = $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
+			var version = GetVersionFromNode (node);
 			// Skip 10 - sizeof("message: \"") and last "
-			var message = node.ArgumentList!.Arguments.Count > 3 ? $" {node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
+			var message = node.ArgumentList?.Arguments.Count > 3 ? $" {node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
 
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
 			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
+		}
+
+		string GetVersionFromNode (AttributeSyntax node)
+		{
+			switch (node.ArgumentList?.Arguments.Count) {
+			case 2: // iOS (Major, Minor)
+				return $"{node.ArgumentList!.Arguments [0]}.{node.ArgumentList!.Arguments [1]}";
+			case 3: // Introduced (Platform, Major, Minor)
+			case 4: // Introduced (Platform, Major, Minor, Message)
+				return $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+			default:
+				return "";
+			}
 		}
 	}
 }

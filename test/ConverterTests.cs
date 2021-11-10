@@ -199,6 +199,17 @@ namespace binding
         [NoWatch]", @"[UnsupportedOSPlatform (""ios"")]");
 		}
 
+		[Fact]
+		public void IntroducedAsOtherNames ()
+		{
+			TestMethodAttributeConversion ("[iOS (11,0)]", @"[SupportedOSPlatform (""ios11.0"")]");
+			TestMethodAttributeConversion (@"[iOS (11,0)]
+        [Mac (11,0)]", @"[SupportedOSPlatform (""ios11.0"")]
+        [SupportedOSPlatform (""macos11.0"")]");
+			TestMethodAttributeConversion (@"[iOS (11,0)]
+        [Watch (11,0)]", @"[SupportedOSPlatform (""ios11.0"")]");
+		}
+
 		// Final smoke test of all base attributes
 		// [Fact]
 		// public void TestAllAttributeKinds ()

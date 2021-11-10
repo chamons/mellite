@@ -1,6 +1,72 @@
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 namespace mellite {
 	public static class PlatformArgumentParser {
-		public static string? Parse (string s)
+
+		public static string? GetPlatformFromNode (AttributeSyntax node)
+		{
+			string? value = null;
+			if (node.ArgumentList?.Arguments.Count > 0) {
+				value = GetPlatformFromAttributeName (node.ArgumentList!.Arguments [0].ToString ());
+			}
+			if (value is null) {
+				value = GetPlatformFromNodeKind (node);
+			}
+			return value;
+		}
+
+		public static string? GetDefineFromNode (AttributeSyntax node)
+		{
+			string? value = null;
+
+			if (node.ArgumentList?.Arguments.Count > 0) {
+				value = GetDefineFromAttributeName (node.ArgumentList!.Arguments [0].ToString ());
+			}
+			if (value is null) {
+				value = GetDefineFromNodeKind (node);
+			}
+			return value;
+		}
+
+		public static string? GetPlatformFromNodeKind (AttributeSyntax node)
+		{
+			switch (node.Name.ToString ()) {
+			case "NoMac":
+			case "Mac":
+				return "macos";
+			case "NoiOS":
+			case "iOS":
+				return "ios";
+			case "NoTV":
+			case "TV":
+				return "tvos";
+			case "NoMacCatalyst":
+			case "MacCatalyst":
+				return "maccatalyst";
+			}
+			return null;
+		}
+
+		public static string? GetDefineFromNodeKind (AttributeSyntax node)
+		{
+			switch (node.Name.ToString ()) {
+			case "NoMac":
+			case "Mac":
+				return "MONOMAC";
+			case "NoiOS":
+			case "iOS":
+				return "IOS";
+			case "NoTV":
+			case "TV":
+				return "TVOS";
+			case "NoMacCatalyst":
+			case "MacCatalyst":
+				return "__MACCATALYST__";
+			}
+			return null;
+		}
+
+		public static string? GetPlatformFromAttributeName (string s)
 		{
 			switch (s) {
 			case "PlatformName.MacOSX":
@@ -19,7 +85,7 @@ namespace mellite {
 			}
 		}
 
-		public static string? ParseDefine (string s)
+		public static string? GetDefineFromAttributeName (string s)
 		{
 			switch (s) {
 			case "PlatformName.MacOSX":
