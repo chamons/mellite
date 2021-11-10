@@ -61,29 +61,16 @@ namespace mellite {
 			return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info, createdAttributes)));
 		}
 
-		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
-		{
-			if (info.DeprecatedAttributesToProcess.Count == 0) {
-				return new List<AttributeListSyntax> ();
-			}
-			var createdAttributes = new List<AttributeListSyntax> ();
-
-			List<AttributeSyntax> nodes = FilterNonNET6Platforms (info.DeprecatedAttributesToProcess);
-
-			// Add all of the deprecated as unsupported in net6
-			createdAttributes.AddRange (AddAllAsUnsupported (info, nodes));
-			createdAttributes.AddRange (AddConditionalObsoleteGrid (info, nodes));
-			return createdAttributes;
-		}
-
 		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
 		{
-			if (info.IntroducedAttributesToProcess.Count == 0) {
+			var nodes = FilterNonNET6Platforms (info.IntroducedAttributesToProcess);
+			if (nodes.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
+
 			var createdAttributes = new List<AttributeListSyntax> ();
-			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
-				var attribute = info.IntroducedAttributesToProcess [i];
+			for (int i = 0; i < nodes.Count; ++i) {
+				var attribute = nodes [i];
 				var newNode = ProcessSupportedAvailabilityNode (attribute);
 				if (newNode != null) {
 					var newAttribute = newNode.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline);
@@ -93,20 +80,39 @@ namespace mellite {
 			return createdAttributes;
 		}
 
-		List<AttributeListSyntax> ProcessUnavailable (HarvestedMemberInfo info)
+		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
 		{
-			if (info.UnavailableAttributesToProcess.Count == 0) {
+			var nodes = FilterNonNET6Platforms (info.DeprecatedAttributesToProcess);
+			if (nodes.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
-			return AddAllAsUnsupported (info, FilterNonNET6Platforms (info.UnavailableAttributesToProcess));
+
+			var createdAttributes = new List<AttributeListSyntax> ();
+
+			// Add all of the deprecated as unsupported in net6
+			createdAttributes.AddRange (AddAllAsUnsupported (info, nodes));
+			createdAttributes.AddRange (AddConditionalObsoleteGrid (info, nodes));
+			return createdAttributes;
+		}
+
+		List<AttributeListSyntax> ProcessUnavailable (HarvestedMemberInfo info)
+		{
+			var nodes = FilterNonNET6Platforms (info.UnavailableAttributesToProcess);
+			if (nodes.Count == 0) {
+				return new List<AttributeListSyntax> ();
+			}
+
+			return AddAllAsUnsupported (info, nodes);
 		}
 
 		List<AttributeListSyntax> ProcessObsolete (HarvestedMemberInfo info)
 		{
-			if (info.ObsoleteAttributesToProcess.Count == 0) {
+			var nodes = FilterNonNET6Platforms (info.ObsoleteAttributesToProcess);
+
+			if (nodes.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
-			return AddConditionalObsoleteGrid (info, FilterNonNET6Platforms (info.ObsoleteAttributesToProcess));
+			return AddConditionalObsoleteGrid (info, nodes);
 		}
 
 		List<AttributeListSyntax> AddConditionalObsoleteGrid (HarvestedMemberInfo info, List<AttributeSyntax> nodes)
