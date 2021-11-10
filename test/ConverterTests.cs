@@ -211,14 +211,41 @@ namespace binding
 		}
 
 		// Final smoke test of all base attributes
-		// [Fact]
-		// public void TestAllAttributeKinds ()
-		// {
-		// 	TestMethodAttributeConversion ("[Introduced (PlatformName.MacOSX, 10, 0)][Deprecated (PlatformName.MacOSX, 11, 0)][Obsoleted (PlatformName.MacOSX, 11, 0)][Unavailable (PlatformName.iOS)]", "");
-		// 	TestMethodAttributeConversion ("[Mac (11, 0)][iOS (11, 0)][TV (10, 0)][MacCatalyst(11, 0)]", "");
-		// 	TestMethodAttributeConversion ("[NoMac][NoiOS][NoTV][NoMacCatalyst]", "");
-		// 	//TestMethodAttributeConversion ("[Watch (11, 0)][NoWatch]", "");
-		// }
+		[Fact]
+		public void TestAllAttributeKinds ()
+		{
+			TestMethodAttributeConversion (@"[Introduced (PlatformName.MacOSX, 10, 0)]
+        [Deprecated (PlatformName.MacOSX, 11, 0)]
+        [Obsolete (PlatformName.iOS, 11, 0)]
+        [Unavailable (PlatformName.MacCatalyst)]", @"[SupportedOSPlatform (""macos10.0"")]
+        [UnsupportedOSPlatform (""macos11.0"")]
+#if MONOMAC
+        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+        [UnsupportedOSPlatform (""maccatalyst"")]
+#if IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif");
+
+			TestMethodAttributeConversion (@"[Mac (11, 0)]
+        [iOS (11, 0)]
+        [TV (10, 0)]
+        [MacCatalyst (11, 0)]", @"[SupportedOSPlatform (""macos11.0"")]
+        [SupportedOSPlatform (""ios11.0"")]
+        [SupportedOSPlatform (""tvos10.0"")]
+        [SupportedOSPlatform (""maccatalyst11.0"")]");
+
+			TestMethodAttributeConversion (@"[NoMac]
+        [NoiOS]
+        [NoTV]
+        [NoMacCatalyst]", @"[UnsupportedOSPlatform (""macos"")]
+        [UnsupportedOSPlatform (""ios"")]
+        [UnsupportedOSPlatform (""tvos"")]
+        [UnsupportedOSPlatform (""maccatalyst"")]");
+
+			// 	TestMethodAttributeConversion (@"[Watch (11, 0)]
+			// [NoWatch]", "");
+		}
 
 		[Fact]
 		public void NewLinesBetweenElements ()

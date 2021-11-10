@@ -1,6 +1,5 @@
-- Handle NoMac, \* other stuff than just introduced
-  - Then check the short platform versions like [iOS (12,0)] which should just work
 - Ignore (but keep) non-relevant attributes
+  - e.g. TestMethodAttributeConversion (@"[Watch (11, 0)][nowatch]", "");
 - iOS implies Catalyst
 - Handing child inherits parent
 - Correctly merging with existing

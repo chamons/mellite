@@ -52,7 +52,7 @@ namespace mellite {
 					switch (attribute.Name.ToString ()) {
 					case "Mac":
 					case "iOS":
-					case "TVAttribute":
+					case "TV":
 					case "MacCatalyst":
 					case "Watch": // Will be later ignored
 					case "Introduced": {
@@ -67,7 +67,7 @@ namespace mellite {
 					}
 					case "NoMac":
 					case "NoiOS":
-					case "NoTVAttribute":
+					case "NoTV":
 					case "NoMacCatalyst":
 					case "NoWatch": // Will be later ignored
 					case "Unavailable": {
