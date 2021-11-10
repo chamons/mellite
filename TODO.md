@@ -1,4 +1,3 @@
-- Merge different attributes that generate #if hell if not of same kind
 - Ignore (but keep) non-relevant attributes
   - e.g. TestMethodAttributeConversion (@"[Watch (11, 0)][nowatch]", "");
 - iOS implies Catalyst

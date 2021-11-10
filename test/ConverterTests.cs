@@ -210,6 +210,28 @@ namespace binding
         [Watch (11,0)]", @"[SupportedOSPlatform (""ios11.0"")]");
 		}
 
+		// TODO - Deprecated and Obsolete #if blocks are not shared and generated separately.
+		// https://github.com/chamons/mellite/issues/1
+		[Fact]
+		public void MergeDifferentIfBlocks ()
+		{
+			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
+        [Obsolete (PlatformName.MacCatalyst)]", @"#if __MACCATALYST__
+        [Obsolete (""Starting with maccatalyst"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif", newAttributeSpaceCount: 0);
+
+			TestMethodAttributeConversion (@"[Obsolete (PlatformName.iOS, 11, 0)]
+        [Deprecated (PlatformName.MacCatalyst)]", @"[UnsupportedOSPlatform (""maccatalyst"")]
+#if __MACCATALYST__
+        [Obsolete (""Starting with maccatalyst"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#if IOS
+        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif");
+		}
+
 		// Final smoke test of all base attributes
 		[Fact]
 		public void TestAllAttributeKinds ()
