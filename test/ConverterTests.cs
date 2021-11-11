@@ -303,7 +303,28 @@ namespace binding
         [UnsupportedOSPlatform (""tvos"")]
         [UnsupportedOSPlatform (""maccatalyst"")]");
 
-			//TestMethodAttributeConversion (@"[Watch (11, 0)][NoWatch]", "");
+		}
+
+		[Fact]
+		public void OnlyWatch ()
+		{
+			TestMethodAttributeConversionToFinal (@"[Watch (11, 0)][NoWatch]", @"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+    public partial class Class1
+    {
+#if !NET
+        [Watch (11, 0)]
+        [NoWatch]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
 		}
 
 		[Fact]

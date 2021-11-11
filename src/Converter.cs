@@ -167,6 +167,7 @@ namespace mellite {
 		{
 			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 
+			// First generate all attributes unrelated to availability
 			foreach (var attribute in info.NonAvailabilityAttributes) {
 				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
 				// So add info.IndentTrivia here by hand
@@ -182,39 +183,60 @@ namespace mellite {
 			// The #if is leading trivia of the first CONVERTED_ATTRIBUTE,
 			// and all the rest is the trailing of the last one
 			// Each attribute will need indentTrivia to be tabbed over enough
-			var leading = new List<SyntaxTrivia> ();
-			leading.AddRange (info.NewlineTrivia);
-			leading.AddRange (TriviaConstants.IfNet);
-			leading.AddRange (TriviaConstants.Newline);
 
-			var trailing = new List<SyntaxTrivia> ();
-			trailing.AddRange (TriviaConstants.Else);
-			trailing.AddRange (TriviaConstants.Newline);
-
-			foreach (var attribute in info.ExistingAvailabilityAttributes) {
-				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
-				// So add info.IndentTrivia here by hand
-				trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
+			// That is UNLESS EXISTING_ATTRIBUTES has zero elements but CONVERTED_ATTRIBUTES has some, which is possible with watch for example
+			// Then we generate the existing attributes with #if !NET and #endif only
+			if (createdAttributes.Count == 0 && info.ExistingAvailabilityAttributes.Count > 0) {
+				var leading = new List<SyntaxTrivia> ();
+				leading.AddRange (info.NewlineTrivia);
+				leading.AddRange (TriviaConstants.IfNotNet);
+				leading.AddRange (TriviaConstants.Newline);
+				var trailing = new List<SyntaxTrivia> ();
+				trailing.AddRange (TriviaConstants.EndIf);
 				trailing.AddRange (TriviaConstants.Newline);
-			}
-			trailing.AddRange (TriviaConstants.EndIf);
-			trailing.AddRange (TriviaConstants.Newline);
 
-			for (int i = 0; i < createdAttributes.Count; i += 1) {
-				var attribute = createdAttributes [i];
+				var attributes = info.ExistingAvailabilityAttributes.Select (x => x.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline)).ToList ();
+				AddToListWithLeadingTrailing (finalAttributes, attributes, leading, trailing);
+			} else {
+				var leading = new List<SyntaxTrivia> ();
+				leading.AddRange (info.NewlineTrivia);
+				leading.AddRange (TriviaConstants.IfNet);
+				leading.AddRange (TriviaConstants.Newline);
+
+				var trailing = new List<SyntaxTrivia> ();
+				trailing.AddRange (TriviaConstants.Else);
+				trailing.AddRange (TriviaConstants.Newline);
+
+				foreach (var attribute in info.ExistingAvailabilityAttributes) {
+					// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
+					// So add info.IndentTrivia here by hand
+					trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
+					trailing.AddRange (TriviaConstants.Newline);
+				}
+				trailing.AddRange (TriviaConstants.EndIf);
+				trailing.AddRange (TriviaConstants.Newline);
+
+				AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
+			}
+			return finalAttributes;
+		}
+
+		// Add each attribute to finalAttributes, appending leading trivia to first and trailing to last element
+		void AddToListWithLeadingTrailing (List<AttributeListSyntax> finalAttributes, IList<AttributeListSyntax> attributes, List<SyntaxTrivia> leading, List<SyntaxTrivia> trailing)
+		{
+			for (int i = 0; i < attributes.Count; i += 1) {
+				var attribute = attributes [i];
 
 				if (i == 0) {
 					// This order matters in some cases, but not in the trailing case
 					leading.AddRange (attribute.GetLeadingTrivia ());
 					attribute = attribute.WithLeadingTrivia (leading);
 				}
-				if (i == createdAttributes.Count - 1) {
+				if (i == attributes.Count - 1) {
 					attribute = attribute.WithTrailingTrivia (attribute.GetTrailingTrivia ().AddRange (trailing));
 				}
 				finalAttributes.Add (attribute);
 			}
-
-			return finalAttributes;
 		}
 
 		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)

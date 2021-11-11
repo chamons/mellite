@@ -51,7 +51,6 @@
                 "${workspaceFolder}/test/mellite.tests.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
-                "--filter:mellite.tests.ConverterTests.TestAllAttributeKinds"
             ],
             "problemMatcher": "$msCompile"
         }
