@@ -63,14 +63,13 @@ namespace mellite {
 
 		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
 		{
-			var nodes = FilterNonNET6Platforms (info.IntroducedAttributesToProcess);
-			if (nodes.Count == 0) {
+			if (info.IntroducedAttributesToProcess.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
 
 			var createdAttributes = new List<AttributeListSyntax> ();
-			for (int i = 0; i < nodes.Count; ++i) {
-				var attribute = nodes [i];
+			for (int i = 0; i < info.IntroducedAttributesToProcess.Count; ++i) {
+				var attribute = info.IntroducedAttributesToProcess [i];
 				var newNode = ProcessSupportedAvailabilityNode (attribute);
 				if (newNode != null) {
 					var newAttribute = newNode.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline);
@@ -82,40 +81,36 @@ namespace mellite {
 
 		List<AttributeListSyntax> ProcessDeprecated (HarvestedMemberInfo info)
 		{
-			var nodes = FilterNonNET6Platforms (info.DeprecatedAttributesToProcess);
-			if (nodes.Count == 0) {
+			if (info.DeprecatedAttributesToProcess.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
 
 			var createdAttributes = new List<AttributeListSyntax> ();
 
 			// Add all of the deprecated as unsupported in net6
-			createdAttributes.AddRange (AddAllAsUnsupported (info, nodes));
-			createdAttributes.AddRange (AddConditionalObsoleteGrid (info, nodes));
+			createdAttributes.AddRange (AddAllAsUnsupported (info, info.DeprecatedAttributesToProcess));
+			createdAttributes.AddRange (AddConditionalObsoleteGrid (info, info.DeprecatedAttributesToProcess));
 			return createdAttributes;
 		}
 
 		List<AttributeListSyntax> ProcessUnavailable (HarvestedMemberInfo info)
 		{
-			var nodes = FilterNonNET6Platforms (info.UnavailableAttributesToProcess);
-			if (nodes.Count == 0) {
+			if (info.UnavailableAttributesToProcess.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
 
-			return AddAllAsUnsupported (info, nodes);
+			return AddAllAsUnsupported (info, info.UnavailableAttributesToProcess);
 		}
 
 		List<AttributeListSyntax> ProcessObsolete (HarvestedMemberInfo info)
 		{
-			var nodes = FilterNonNET6Platforms (info.ObsoleteAttributesToProcess);
-
-			if (nodes.Count == 0) {
+			if (info.ObsoleteAttributesToProcess.Count == 0) {
 				return new List<AttributeListSyntax> ();
 			}
-			return AddConditionalObsoleteGrid (info, nodes);
+			return AddConditionalObsoleteGrid (info, info.ObsoleteAttributesToProcess);
 		}
 
-		List<AttributeListSyntax> AddConditionalObsoleteGrid (HarvestedMemberInfo info, List<AttributeSyntax> nodes)
+		List<AttributeListSyntax> AddConditionalObsoleteGrid (HarvestedMemberInfo info, IList<AttributeSyntax> nodes)
 		{
 			// Now build up with super attribute like this:
 			// #if __MACCATALYST__
@@ -157,7 +152,7 @@ namespace mellite {
 			return new List<AttributeListSyntax> { finalAttribute };
 		}
 
-		List<AttributeListSyntax> AddAllAsUnsupported (HarvestedMemberInfo info, List<AttributeSyntax> nodes)
+		List<AttributeListSyntax> AddAllAsUnsupported (HarvestedMemberInfo info, IList<AttributeSyntax> nodes)
 		{
 			var createdAttributes = new List<AttributeListSyntax> ();
 
@@ -168,13 +163,7 @@ namespace mellite {
 			return createdAttributes;
 		}
 
-		// Filter any attributes that don't line up on NET6, such as watch first
-		List<AttributeSyntax> FilterNonNET6Platforms (IList<AttributeSyntax> nodes)
-		{
-			return nodes.Where (n => PlatformArgumentParser.GetDefineFromNode (n) != null).ToList ();
-		}
-
-		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info, List<AttributeListSyntax> createdAttributes)
+		List<AttributeListSyntax> GenerateFinalAttributes (HarvestedMemberInfo info, IList<AttributeListSyntax> createdAttributes)
 		{
 			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 

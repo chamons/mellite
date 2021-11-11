@@ -58,14 +58,13 @@ namespace mellite {
 					case "iOS":
 					case "TV":
 					case "MacCatalyst":
-					case "Watch": // Will be later ignored
 					case "Introduced": {
-						introducedAttributesToProcess.Add (attribute);
+						AddIfSupportedPlatform (attribute, introducedAttributesToProcess);
 						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
 					case "Deprecated": {
-						deprecatedAttributesToProcess.Add (attribute);
+						AddIfSupportedPlatform (attribute, deprecatedAttributesToProcess);
 						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
@@ -73,14 +72,18 @@ namespace mellite {
 					case "NoiOS":
 					case "NoTV":
 					case "NoMacCatalyst":
-					case "NoWatch": // Will be later ignored
 					case "Unavailable": {
-						unavailableAttributesToProcess.Add (attribute);
+						AddIfSupportedPlatform (attribute, unavailableAttributesToProcess);
 						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
 					case "Obsoleted": {
-						obsoleteAttributesToProcess.Add (attribute);
+						AddIfSupportedPlatform (attribute, obsoleteAttributesToProcess);
+						existingAvailabilityAttributes.Add (attribute);
+						break;
+					}
+					case "NoWatch":
+					case "Watch": {
 						existingAvailabilityAttributes.Add (attribute);
 						break;
 					}
@@ -97,6 +100,14 @@ namespace mellite {
 			ForceiOSToEndOfList (obsoleteAttributesToProcess);
 
 			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
+		}
+
+		static void AddIfSupportedPlatform (AttributeSyntax attribute, List<AttributeSyntax> list)
+		{
+			// We don't want to add Watch o IntroducedAttributesToProcess for example
+			if (PlatformArgumentParser.GetPlatformFromNode (attribute) != null) {
+				list.Add (attribute);
+			}
 		}
 
 		static void ForceiOSToEndOfList (List<AttributeSyntax> nodes)
