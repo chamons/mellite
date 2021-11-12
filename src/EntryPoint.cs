@@ -53,7 +53,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Converter.ConvertFile (file);
+					Processor.ProcessFile (file, ProcessSteps.ConvertXamarinAttributes);
 				}
 				break;
 			}

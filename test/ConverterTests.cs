@@ -4,35 +4,8 @@ using Xunit;
 
 namespace mellite.tests {
 	public class ConverterTests {
-		string GetConditionalAttributeBlock (string xamarinAttribute, string newAttribute, int spaceCount, int? newAttributeSpaceCount = null)
-		{
-			newAttributeSpaceCount ??= spaceCount;
-			return $@"#if NET
-{new String (' ', (int) newAttributeSpaceCount)}{newAttribute}
-#else
-{new String (' ', spaceCount)}{xamarinAttribute}
-#endif";
 
-		}
-
-		string GetTestProgram (string body) => $@"using System;
-using ObjCRuntime;
-
-namespace binding
-{{
-{body}
-}}
-";
-
-		void TestConversion (string original, string expected)
-		{
-#if true
-			Console.WriteLine (Converter.ConvertText (original));
-			Console.WriteLine (expected);
-#endif
-
-			Assert.Equal (expected, Converter.ConvertText (original), ignoreLineEndingDifferences: true);
-		}
+		void TestConversion (string original, string expected) => TestUtilities.TestProcess (original, ProcessSteps.ConvertXamarinAttributes, expected);
 
 		void TestClassAttributeConversion (string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
 		{
@@ -42,8 +15,8 @@ namespace binding
         public void Foo () {{}}
     }}";
 			xamarinAttributeAfterConvert ??= xamarinAttribute;
-			var original = GetTestProgram (string.Format (body, "    " + xamarinAttribute));
-			var expected = GetTestProgram (string.Format (body, GetConditionalAttributeBlock (xamarinAttributeAfterConvert, newAttribute, 4)));
+			var original = TestUtilities.GetTestProgram (string.Format (body, "    " + xamarinAttribute));
+			var expected = TestUtilities.GetTestProgram (string.Format (body, TestUtilities.GetConditionalAttributeBlock (xamarinAttributeAfterConvert, newAttribute, 4)));
 			TestConversion (original, expected);
 		}
 
@@ -77,8 +50,8 @@ namespace binding
         public void Bar () {{}}
     }}";
 			xamarinAttributeAfterConvert ??= xamarinAttribute;
-			var original = GetTestProgram (string.Format (body, "        " + xamarinAttribute));
-			var expected = GetTestProgram (string.Format (body, GetConditionalAttributeBlock (xamarinAttributeAfterConvert, newAttribute, 8, newAttributeSpaceCount)));
+			var original = TestUtilities.GetTestProgram (string.Format (body, "        " + xamarinAttribute));
+			var expected = TestUtilities.GetTestProgram (string.Format (body, TestUtilities.GetConditionalAttributeBlock (xamarinAttributeAfterConvert, newAttribute, 8, newAttributeSpaceCount)));
 			TestConversion (original, expected);
 		}
 
@@ -91,7 +64,7 @@ namespace binding
 
         public void Bar () {{}}
     }}";
-			var original = GetTestProgram (string.Format (body, "        " + xamarinAttribute));
+			var original = TestUtilities.GetTestProgram (string.Format (body, "        " + xamarinAttribute));
 			TestConversion (original, expected);
 		}
 

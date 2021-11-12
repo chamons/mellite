@@ -1,7 +1,4 @@
-using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 
 using Microsoft.CodeAnalysis;
@@ -10,28 +7,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using mellite.Utilities;
 
 namespace mellite {
-	public static class Converter {
-		public static void ConvertFile (string path)
-		{
-			var text = ConvertText (File.ReadAllText (path));
-			File.WriteAllText (path, text);
-		}
-
-		public static string ConvertText (string text)
-		{
-			SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
-			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
-
-			var compilation = CSharpCompilation.Create ("ConvertAssembly")
-				.AddReferences (MetadataReference.CreateFromFile (typeof (string).Assembly.Location)).AddSyntaxTrees (tree);
-			SemanticModel model = compilation.GetSemanticModel (tree);
-
-			return root!.Accept (new AttributeConverterVisitor (model))!.ToFullString ();
-		}
-	}
-
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
-		public AttributeConverterVisitor (SemanticModel semanticModel) { }
+		public AttributeConverterVisitor () { }
 
 		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node);
 		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node);
