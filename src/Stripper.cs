@@ -71,8 +71,6 @@ namespace mellite {
 		{
 			var text = Text.ToString ().Trim ();
 			if (text.Length > 0) {
-				Console.WriteLine ($"Trivia found: '{text}'");
-
 				SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
 
 				CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
@@ -106,9 +104,54 @@ namespace mellite {
 
 		T? Process<T> (T node) where T : MemberDeclarationSyntax
 		{
-			Func<SyntaxTrivia, bool> isMarked = x => x.GetAnnotations (MarkingAttributeStripperVisitor.ToRemoveAnnotation).Any ();
-			if (node.GetLeadingTrivia ().Any (isMarked) || node.GetTrailingTrivia ().Any (isMarked)) {
-				return node.WithoutTrivia ();
+			var markedIndex = node.GetLeadingTrivia ().IndexOf (x => x.GetAnnotations (MarkingAttributeStripperVisitor.ToRemoveAnnotation).Any ());
+			if (markedIndex != -1) {
+				var triviaList = node.GetLeadingTrivia ();
+
+
+				switch (triviaList [markedIndex].Kind ()) {
+				case SyntaxKind.EndIfDirectiveTrivia: {
+					// This will be the range of trivia to delete in removing the #if block section
+					var endIndex = triviaList.IndexOf (triviaList [markedIndex]);
+					var index = endIndex;
+
+					// Walk backwards until we hit an else or the if.
+					bool complete = false;
+					while (!complete && index >= 0) {
+						switch (triviaList [index].Kind ()) {
+						case SyntaxKind.IfDirectiveTrivia:
+							// Delete the entire range from #if to #endif
+							complete = true;
+							break;
+						case SyntaxKind.ElseDirectiveTrivia:
+							throw new NotImplementedException ();
+						default:
+							// Continue processing
+							index -= 1;
+							break;
+						}
+					}
+
+					// Apply that deletion range
+					var finalTrivia = triviaList.ToList ();
+					finalTrivia.RemoveRange (index, endIndex - index + 1);
+					return node.WithLeadingTrivia (finalTrivia);
+				}
+				case SyntaxKind.ElseDirectiveTrivia: {
+					// TODO - The problem is that we're hitting this with NET defined, so we see
+					// #if STUFF #else defined as leading the "real" UnsupportedOSPlatform
+					// which is wrong. 
+					// (text == "#if !NET" && NetIsDefined on 47 should be text == "#else"
+					// So we can delete the else -> before the endif 
+					// However, we can't just trigger than on every #else
+					// so MarkingAttributeStripperVisitor will have to have state to remember "I just saw a #if !NET
+					// so mark the next #else", and then flip all of that logic. What a mess....
+					throw new NotImplementedException ();
+					break;
+				}
+				default:
+					throw new NotImplementedException ();
+				}
 			}
 			return null;
 		}

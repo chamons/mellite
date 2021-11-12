@@ -30,6 +30,7 @@ namespace mellite.tests {
 ", "");
 
 			TestMethodAttributeStripping (@"#if !NET
+		[NoiOS]
 #else
         [UnsupportedOSPlatform (""ios13.0"")]
 #endif

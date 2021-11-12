@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,6 +17,19 @@ namespace mellite.Utilities {
 			var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
 			return SyntaxFactory.AttributeList (netAttributeElements);
 		}
+	}
 
+	public static class LinqExtensions {
+		public static int IndexOf<TSource> (this IEnumerable<TSource> source, Func<TSource, bool> predicate)
+		{
+			var index = 0;
+			foreach (var item in source) {
+				if (predicate.Invoke (item)) {
+					return index;
+				}
+				index++;
+			}
+			return -1;
+		}
 	}
 }
