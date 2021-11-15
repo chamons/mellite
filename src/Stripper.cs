@@ -100,19 +100,20 @@ namespace mellite {
 			Chunk.Append (Environment.NewLine);
 		}
 
-		void FileAppend (string line)
+		void FileAppend (string line, bool skipNewLine = false)
 		{
 			File.Append (line);
-			File.Append (Environment.NewLine);
+			if (!skipNewLine) {
+				File.Append (Environment.NewLine);
+			}
 		}
 
 		public void WriteChunk (string current)
 		{
-			ChunkAppend (current);
 			// Skip the #if and #else or #end for analysis by roslyn
 			string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
 			if (!ContainsOnlyAttributes (section)) {
-				FileAppend (Chunk.ToString ());
+				FileAppend (Chunk.ToString (), true);
 				return;
 			}
 
