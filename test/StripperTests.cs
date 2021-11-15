@@ -67,6 +67,26 @@ namespace mellite.tests {
 #endif
 ");
 		}
+
+		[Fact]
+		public void StripNestedAttributes ()
+		{
+			TestMethodAttributeStripping (@"#if NET
+        [UnsupportedOSPlatform (""ios13.0"")]
+#if IOS
+        [Obsolete (""Starting with ios13.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+        [UnsupportedOSPlatform (""maccatalyst"")]
+#else
+        [Deprecated (PlatformName.iOS, 13, 0)]
+        [Unavailable (PlatformName.MacCatalyst)]
+#endif
+", @"#if !NET
+        [Deprecated (PlatformName.iOS, 13, 0)]
+        [Unavailable (PlatformName.MacCatalyst)]
+#endif
+");
+		}
 	}
 }
 

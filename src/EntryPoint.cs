@@ -17,12 +17,15 @@ namespace mellite {
 			ActionType requestedAction = ActionType.Process;
 			string? path = null;
 			LocatorOptions locatorOptions = new LocatorOptions ();
+			ProcessSteps steps = ProcessSteps.ConvertXamarinAttributes;
 
 			OptionSet os = new OptionSet ()
 			{
 				{ "h|?|help", "Displays the help", v => requestedAction = ActionType.Help },
 				{ "l|list-files", "Lists files considered for processing", v => requestedAction = ActionType.ListFilesToProcess },
 				{ "i|ignore=", "Directories (relative to root) not to be considered for processing", i => locatorOptions.Ignore.Add (i) },
+				{ "strip", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
+
 			};
 
 			try {
@@ -53,7 +56,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Processor.ProcessFile (file, ProcessSteps.ConvertXamarinAttributes);
+					Processor.ProcessFile (file, steps);
 				}
 				break;
 			}
