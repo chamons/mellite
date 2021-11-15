@@ -24,13 +24,13 @@ namespace mellite.tests {
 		[Fact]
 		public void StripEntireBlock ()
 		{
-			TestMethodAttributeStripping (@"#if NET
-        [UnsupportedOSPlatform (""ios13.0"")]
-#endif
-", "");
+			// 			TestMethodAttributeStripping (@"#if NET
+			//         [UnsupportedOSPlatform (""ios13.0"")]
+			// #endif
+			// ", "");
 
 			TestMethodAttributeStripping (@"#if !NET
-		[NoiOS]
+        [NoiOS]
 #else
         [UnsupportedOSPlatform (""ios13.0"")]
 #endif

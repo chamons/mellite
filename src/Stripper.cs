@@ -29,7 +29,11 @@ namespace mellite {
 		public static string ToRemoveAnnotation = "mellite.remove";
 
 		StringBuilder Text = new StringBuilder ();
-		bool Enabled = false;
+
+		bool Enabled = false; // Should we start recording text for potential removal?
+		bool EnableNextElse = false; // We should set Enable on the next else if it occurs before endif
+
+		// TODO - If hack below works, remove this and run only with define not defined
 		bool NetIsDefined;
 
 		public MarkingAttributeStripperVisitor (bool netIsDefined)
@@ -42,17 +46,27 @@ namespace mellite {
 			bool markForRemoval = false;
 			switch (trivia.Kind ()) {
 			case SyntaxKind.IfDirectiveTrivia:
-				// Only start listening inside the recognized block of our flavor
+				// - If we see #if NET start listening
+				// - If we see #if !NET note that we should start listening at the else
 				var text = trivia.ToFullString ().Trim ();
-				Enabled = (text == "#if NET" && !NetIsDefined) || (text == "#if !NET" && NetIsDefined);
+				Enabled = text == "#if NET" && !NetIsDefined;
+				EnableNextElse = text == "#if !NET" && !NetIsDefined;
 				break;
 			case SyntaxKind.ElseDirectiveTrivia:
-				markForRemoval = ProcessTriviaBlock ();
-				Enabled = !Enabled;
+				if (EnableNextElse) {
+					Enabled = true;
+					EnableNextElse = false;
+				} else if (Enabled) {
+					markForRemoval = ProcessTriviaBlock ();
+					Enabled = false;
+				}
 				break;
 			case SyntaxKind.EndIfDirectiveTrivia:
-				markForRemoval = ProcessTriviaBlock ();
-				Enabled = false;
+				if (Enabled) {
+					markForRemoval = ProcessTriviaBlock ();
+					Enabled = false;
+					EnableNextElse = false;
+				}
 				break;
 			default:
 				if (Enabled) {
@@ -104,10 +118,13 @@ namespace mellite {
 
 		T? Process<T> (T node) where T : MemberDeclarationSyntax
 		{
-			var markedIndex = node.GetLeadingTrivia ().IndexOf (x => x.GetAnnotations (MarkingAttributeStripperVisitor.ToRemoveAnnotation).Any ());
+			Func<SyntaxTrivia, bool> hasMarking = x => x.GetAnnotations (MarkingAttributeStripperVisitor.ToRemoveAnnotation).Any ();
+			var markedIndex = node.GetLeadingTrivia ().IndexOf (hasMarking);
+			if (markedIndex == -1) {
+				markedIndex = node.GetTrailingTrivia ().IndexOf (hasMarking);
+			}
 			if (markedIndex != -1) {
 				var triviaList = node.GetLeadingTrivia ();
-
 
 				switch (triviaList [markedIndex].Kind ()) {
 				case SyntaxKind.EndIfDirectiveTrivia: {
