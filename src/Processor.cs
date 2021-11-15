@@ -24,33 +24,20 @@ namespace mellite {
 
 		public static string ProcessText (string text, ProcessSteps steps)
 		{
-			if (steps == ProcessSteps.StripExistingNET6Attributes) {
-				// First process the stripping with NET defined, then again without
-				return ProcessTextCore (ProcessTextCore (text, steps, true), steps, false);
-			} else {
-				return ProcessTextCore (text, steps, false);
-			}
-		}
-
-		// For some cases we have to both NET and !NET to process both sides, so just do all of the work twice
-		static string ProcessTextCore (string text, ProcessSteps steps, bool defineNet)
-		{
-			CSharpParseOptions options = new CSharpParseOptions (preprocessorSymbols: defineNet ? new string [] { "NET" } : new string [] { });
-			SyntaxTree tree = CSharpSyntaxTree.ParseText (text, options);
-
-			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
-
 			switch (steps) {
 			case ProcessSteps.ConvertXamarinAttributes:
+				SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
+
+				CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
+
 				root = (CompilationUnitSyntax) root!.Accept (new AttributeConverterVisitor ())!;
-				break;
+				return root!.ToFullString ();
 			case ProcessSteps.StripExistingNET6Attributes:
-				root = (CompilationUnitSyntax) root!.Accept (new MarkingAttributeStripperVisitor (defineNet))!;
-				root = (CompilationUnitSyntax) root!.Accept (new RemoveMarkedTriviaStripperVisitor ())!;
-				break;
+				return (new Stripper ()).StripText (text);
+			default:
+				return text;
 			}
 
-			return root!.ToFullString ();
 		}
 	}
 }

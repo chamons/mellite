@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using mellite.Utilities;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 namespace mellite {
 	// We want to strip blocks like this:
@@ -20,157 +21,126 @@ namespace mellite {
 	// So this solves a constrained subproblem and detects only two cases:
 	// - #1 - #if NET
 	// - #2 - #if !NET
-	// A further problem is that inside the "non-active" case we just see a bunch of disabled text, and in the "active" case we have roslyn structured code
-	// So we run this twice, and only visit the trivia in between a recognized #if block and it's #else of #endif. By doing that, and defining NET in one of them
-	// we can treat it always as disabled text consistently.
+	// and does it without using Roslyn at all.
+	// The reason for not using roslyn is that with #else cases, the information of #if and #endif gets 
+	// split across multiple nodes, and becomes a nightmare.
+	// Just use a dumb "read each line one at a time and process" parser
 
-	// This rewriter runs first and marks trivia that should be removed with ToRemoveAnnotation.
-	class MarkingAttributeStripperVisitor : CSharpSyntaxRewriter {
-		public static string ToRemoveAnnotation = "mellite.remove";
+	class Stripper {
+		bool Enabled = false;
+		bool EnableOnElse = false;
+		StringBuilder File = new StringBuilder ();
+		StringBuilder Chunk = new StringBuilder ();
 
-		StringBuilder Text = new StringBuilder ();
-
-		bool Enabled = false; // Should we start recording text for potential removal?
-		bool EnableNextElse = false; // We should set Enable on the next else if it occurs before endif
-
-		// TODO - If hack below works, remove this and run only with define not defined
-		bool NetIsDefined;
-
-		public MarkingAttributeStripperVisitor (bool netIsDefined)
+		public Stripper ()
 		{
-			NetIsDefined = netIsDefined;
 		}
 
-		public override SyntaxTrivia VisitTrivia (SyntaxTrivia trivia)
+		public void Reset ()
 		{
-			bool markForRemoval = false;
-			switch (trivia.Kind ()) {
-			case SyntaxKind.IfDirectiveTrivia:
-				// - If we see #if NET start listening
-				// - If we see #if !NET note that we should start listening at the else
-				var text = trivia.ToFullString ().Trim ();
-				Enabled = text == "#if NET" && !NetIsDefined;
-				EnableNextElse = text == "#if !NET" && !NetIsDefined;
-				break;
-			case SyntaxKind.ElseDirectiveTrivia:
-				if (EnableNextElse) {
+			Enabled = false;
+			EnableOnElse = false;
+			File.Clear ();
+			Chunk.Clear ();
+		}
+
+		public string StripText (string text)
+		{
+			Reset ();
+
+			foreach (var line in text.SplitLines ()) {
+				var trimmedLine = line.Trim ();
+				switch (trimmedLine) {
+				case "#if NET":
+					ChunkAppend (line);
 					Enabled = true;
-					EnableNextElse = false;
-				} else if (Enabled) {
-					markForRemoval = ProcessTriviaBlock ();
+					break;
+				case "#if !NET":
+					FileAppend (line);
+					EnableOnElse = true;
+					break;
+				case "#else":
+					if (Enabled) {
+						ChunkAppend (line);
+						WriteChunk (line);
+						Enabled = false;
+					} else if (EnableOnElse) {
+						EnableOnElse = false;
+						Enabled = true;
+						ChunkAppend (line);
+					} else {
+						FileAppend (line);
+					}
+					break;
+				case "#endif":
+					if (Enabled) {
+						ChunkAppend (line);
+						WriteChunk (line);
+					} else {
+						FileAppend (line);
+					}
 					Enabled = false;
+					EnableOnElse = false;
+					break;
+				default:
+					if (Enabled) {
+						ChunkAppend (line);
+					} else {
+						FileAppend (line);
+					}
+					break;
 				}
+			}
+			return File.ToString ();
+		}
+
+		void ChunkAppend (string line)
+		{
+			Chunk.Append (line);
+			Chunk.Append (Environment.NewLine);
+		}
+
+		void FileAppend (string line)
+		{
+			File.Append (line);
+			File.Append (Environment.NewLine);
+		}
+
+		public void WriteChunk (string current)
+		{
+			ChunkAppend (current);
+			// Skip the #if and #else or #end for analysis by roslyn
+			string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
+			if (!ContainsOnlyAttributes (section)) {
+				FileAppend (Chunk.ToString ());
+				return;
+			}
+
+			switch (current.Trim ()) {
+			case "#else":
+				// Invert the first if and drop the rest
+				FileAppend ("#if !NET");
 				break;
-			case SyntaxKind.EndIfDirectiveTrivia:
-				if (Enabled) {
-					markForRemoval = ProcessTriviaBlock ();
-					Enabled = false;
-					EnableNextElse = false;
+			case "#endif":
+				// If our first line is #else then replace with #endif, otherwise drop everything
+				if (Chunk!.ToString ().SplitLines ().First () == "#else") {
+					FileAppend ("#endif");
 				}
 				break;
 			default:
-				if (Enabled) {
-					Text.Append (trivia.ToFullString ());
-				}
-				break;
-			}
-			if (markForRemoval) {
-				return trivia.WithAdditionalAnnotations (new SyntaxAnnotation (ToRemoveAnnotation));
-			} else {
-				return trivia;
+				throw new NotImplementedException ();
 			}
 		}
 
-		bool ProcessTriviaBlock ()
+		public bool ContainsOnlyAttributes (string text)
 		{
-			var text = Text.ToString ().Trim ();
-			if (text.Length > 0) {
-				SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
+			SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
 
-				CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
+			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
 
-				var visitor = new TriviaContentsVisitor ();
-				root!.Accept (visitor);
-				// If everything in our block is an attribute, mark it for removal
-				return visitor.EverythingIsAvailabilityAttribute;
-			}
-			Text.Clear ();
-			return false;
-		}
-	}
-
-	// This rewriter finds all nodes with 'mellite.remove' and rewrites or removes their trivia
-	class RemoveMarkedTriviaStripperVisitor : CSharpSyntaxRewriter {
-		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node)
-		{
-			return Process (node) ?? base.VisitPropertyDeclaration (node);
-		}
-
-		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node)
-		{
-			return Process (node) ?? base.VisitMethodDeclaration (node);
-		}
-
-		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
-		{
-			return Process (node) ?? base.VisitClassDeclaration (node);
-		}
-
-		T? Process<T> (T node) where T : MemberDeclarationSyntax
-		{
-			Func<SyntaxTrivia, bool> hasMarking = x => x.GetAnnotations (MarkingAttributeStripperVisitor.ToRemoveAnnotation).Any ();
-			var markedIndex = node.GetLeadingTrivia ().IndexOf (hasMarking);
-			if (markedIndex == -1) {
-				markedIndex = node.GetTrailingTrivia ().IndexOf (hasMarking);
-			}
-			if (markedIndex != -1) {
-				var triviaList = node.GetLeadingTrivia ();
-
-				switch (triviaList [markedIndex].Kind ()) {
-				case SyntaxKind.EndIfDirectiveTrivia: {
-					// This will be the range of trivia to delete in removing the #if block section
-					var endIndex = triviaList.IndexOf (triviaList [markedIndex]);
-					var index = endIndex;
-
-					// Walk backwards until we hit an else or the if.
-					bool complete = false;
-					while (!complete && index >= 0) {
-						switch (triviaList [index].Kind ()) {
-						case SyntaxKind.IfDirectiveTrivia:
-							// Delete the entire range from #if to #endif
-							complete = true;
-							break;
-						case SyntaxKind.ElseDirectiveTrivia:
-							throw new NotImplementedException ();
-						default:
-							// Continue processing
-							index -= 1;
-							break;
-						}
-					}
-
-					// Apply that deletion range
-					var finalTrivia = triviaList.ToList ();
-					finalTrivia.RemoveRange (index, endIndex - index + 1);
-					return node.WithLeadingTrivia (finalTrivia);
-				}
-				case SyntaxKind.ElseDirectiveTrivia: {
-					// TODO - The problem is that we're hitting this with NET defined, so we see
-					// #if STUFF #else defined as leading the "real" UnsupportedOSPlatform
-					// which is wrong. 
-					// (text == "#if !NET" && NetIsDefined on 47 should be text == "#else"
-					// So we can delete the else -> before the endif 
-					// However, we can't just trigger than on every #else
-					// so MarkingAttributeStripperVisitor will have to have state to remember "I just saw a #if !NET
-					// so mark the next #else", and then flip all of that logic. What a mess....
-					throw new NotImplementedException ();
-					break;
-				}
-				default:
-					throw new NotImplementedException ();
-				}
-			}
-			return null;
+			var visitor = new TriviaContentsVisitor ();
+			root!.Accept (visitor);
+			return visitor.EverythingIsAvailabilityAttribute;
 		}
 	}
 

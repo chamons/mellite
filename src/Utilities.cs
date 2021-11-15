@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using Microsoft.CodeAnalysis;
@@ -30,6 +31,18 @@ namespace mellite.Utilities {
 				index++;
 			}
 			return -1;
+		}
+	}
+
+	public static class StringExtensions {
+		internal static IEnumerable<string> SplitLines (this string text)
+		{
+			string? line;
+			using (var reader = new StringReader (text)) {
+				while ((line = reader.ReadLine ()) != null) {
+					yield return line;
+				}
+			}
 		}
 	}
 }
