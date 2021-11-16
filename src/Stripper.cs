@@ -25,10 +25,20 @@ namespace mellite {
 	// The reason for not using roslyn is that with #else cases, the information of #if and #endif gets 
 	// split across multiple nodes, and becomes a nightmare.
 	// Just use a dumb "read each line one at a time and process" parser
-
+	enum StripperState {
+		InsideInterestBlock,
+		WaitingForPotentialElseNotNetBlock,
+		InsideUnrelatedBlock,
+	}
 	class Stripper {
-		bool Enabled = false;
-		bool EnableOnElse = false;
+		Stack<StripperState> States = new Stack<StripperState> ();
+
+		bool HasCurrentState => States.Count > 0;
+
+		// Are we directly nested within a InsideInterestBlock (possibly within a #if as well)
+		bool InsideInterestBlock => States.Any (x => x == StripperState.InsideInterestBlock);
+		StripperState GetCurrentState (string context) => States.TryPeek (out StripperState s) ? s : throw new InvalidOperationException ($"No state found: {context}");
+
 		StringBuilder File = new StringBuilder ();
 		StringBuilder Chunk = new StringBuilder ();
 
@@ -38,8 +48,7 @@ namespace mellite {
 
 		public void Reset ()
 		{
-			Enabled = false;
-			EnableOnElse = false;
+			States.Clear ();
 			File.Clear ();
 			Chunk.Clear ();
 		}
@@ -52,52 +61,60 @@ namespace mellite {
 				var trimmedLine = line.Trim ();
 				switch (trimmedLine) {
 				case "#if NET":
-					ChunkAppend (line);
-					Enabled = true;
+					States.Push (StripperState.InsideInterestBlock);
+					Write (line);
 					break;
 				case "#if !NET":
-					FileAppend (line);
-					EnableOnElse = true;
+					States.Push (StripperState.WaitingForPotentialElseNotNetBlock);
+					Write (line);
+					break;
+				case string s when s.StartsWith ("#if"):
+					States.Push (StripperState.InsideUnrelatedBlock);
+					Write (line);
 					break;
 				case "#else":
-					if (Enabled) {
-						ChunkAppend (line);
-						WriteChunk (line);
-						Enabled = false;
-					} else if (EnableOnElse) {
-						EnableOnElse = false;
-						Enabled = true;
-						ChunkAppend (line);
-					} else {
-						FileAppend (line);
+					switch (GetCurrentState ("#else")) {
+					case StripperState.InsideInterestBlock:
+						// We've wrapped up the block of interest, write out chunk and move to unrelated.
+						Write (line);
+						FinishCurrentChunk (line);
+						States.Pop ();
+						States.Push (StripperState.InsideUnrelatedBlock);
+						break;
+					case StripperState.WaitingForPotentialElseNotNetBlock:
+						// We were waiting for this block
+						States.Pop ();
+						States.Push (StripperState.InsideInterestBlock);
+						Write (line);
+						break;
+					default:
+						Write (line);
+						break;
 					}
 					break;
 				case "#endif":
-					if (Enabled) {
-						ChunkAppend (line);
-						WriteChunk (line);
-					} else {
-						FileAppend (line);
+					Write (line);
+					if (GetCurrentState ("#endif") == StripperState.InsideInterestBlock) {
+						FinishCurrentChunk (line);
 					}
-					Enabled = false;
-					EnableOnElse = false;
+					States.Pop ();
 					break;
 				default:
-					if (Enabled) {
-						ChunkAppend (line);
-					} else {
-						FileAppend (line);
-					}
+					Write (line);
 					break;
 				}
 			}
 			return File.ToString ();
 		}
 
-		void ChunkAppend (string line)
+		void Write (string line, bool skipNewLine = false)
 		{
-			Chunk.Append (line);
-			Chunk.Append (Environment.NewLine);
+			var current = InsideInterestBlock ? Chunk : File;
+
+			current.Append (line);
+			if (!skipNewLine) {
+				current.Append (Environment.NewLine);
+			}
 		}
 
 		void FileAppend (string line, bool skipNewLine = false)
@@ -108,7 +125,7 @@ namespace mellite {
 			}
 		}
 
-		public void WriteChunk (string current)
+		public void FinishCurrentChunk (string current)
 		{
 			// Skip the #if and #else or #end for analysis by roslyn
 			string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
