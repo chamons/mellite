@@ -404,5 +404,114 @@ namespace binding
 }}
 ");
 		}
+
+		void TestParentAndChildConversion (string parentXamarinAttribute, string childXamarinAttribute, string expected)
+		{
+			string body = @"    {0}
+    public partial class Class1
+    {{
+        {1}
+        public void Foo () {{}}
+
+        public void Bar () {{}}
+    }}";
+			var original = TestUtilities.GetTestProgram (string.Format (body, parentXamarinAttribute, childXamarinAttribute));
+			TestConversion (original, expected);
+		}
+
+		[Fact]
+		public void ChildInheritance ()
+		{
+			TestParentAndChildConversion ("[Unavailable (PlatformName.MacOSX, 10, 0)][Unavailable (PlatformName.iOS, 11, 0)]",
+			"[Introduced (PlatformName.MacOSX, 11, 0)]",
+			@"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+#if NET
+    [UnsupportedOSPlatform (""macos10.0"")]
+    [UnsupportedOSPlatform (""ios11.0"")]
+#else
+    [Unavailable (PlatformName.MacOSX, 10, 0)]
+    [Unavailable (PlatformName.iOS, 11, 0)]
+#endif
+    public partial class Class1
+    {
+#if NET
+        [SupportedOSPlatform (""macos11.0"")]
+        [UnsupportedOSPlatform (""macos10.0"")]
+        [UnsupportedOSPlatform (""ios11.0"")]
+#else
+        [Introduced (PlatformName.MacOSX, 11, 0)]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
+
+		[Fact]
+		public void DuplicatedChildInheritance ()
+		{
+			TestParentAndChildConversion ("[Introduced (PlatformName.MacOSX, 10, 0)]",
+			"[Introduced (PlatformName.MacOSX, 11, 0)]",
+			@"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+#if NET
+    [SupportedOSPlatform (""macos10.0"")]
+#else
+    [Introduced (PlatformName.MacOSX, 10, 0)]
+#endif
+    public partial class Class1
+    {
+#if NET
+        [SupportedOSPlatform (""macos11.0"")]
+#else
+        [Introduced (PlatformName.MacOSX, 11, 0)]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
+
+		[Fact]
+		public void DifferentPlatformNotDuplicatedChildInheritance ()
+		{
+			TestParentAndChildConversion ("[Introduced (PlatformName.iOS, 10, 0)]",
+			"[Introduced (PlatformName.MacOSX, 11, 0)]",
+			@"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+#if NET
+    [SupportedOSPlatform (""ios10.0"")]
+#else
+    [Introduced (PlatformName.iOS, 10, 0)]
+#endif
+    public partial class Class1
+    {
+#if NET
+        [SupportedOSPlatform (""macos11.0"")]
+        [SupportedOSPlatform (""ios10.0"")]
+#else
+        [Introduced (PlatformName.MacOSX, 11, 0)]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
 	}
 }

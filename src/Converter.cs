@@ -10,22 +10,23 @@ namespace mellite {
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
 		public AttributeConverterVisitor () { }
 
-		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node);
-		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node);
+		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, (ClassDeclarationSyntax?) node.Parent);
+		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, (ClassDeclarationSyntax?) node.Parent);
 
 		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
 		{
+			// Need to first call base so properties/methods are visited
 			var processedNode = (ClassDeclarationSyntax?) base.VisitClassDeclaration (node);
 			if (processedNode != null) {
-				return Apply (processedNode);
+				return Apply (processedNode, null);
 			}
 			return null;
 		}
 
 		// An example of desired behavior - https://github.com/xamarin/xamarin-macios/blob/main/src/AudioUnit/AudioComponentDescription.cs#L166
-		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member)
+		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, ClassDeclarationSyntax? parent)
 		{
-			HarvestedMemberInfo info = Harvester.Process (member);
+			HarvestedMemberInfo info = Harvester.Process (member, parent);
 
 			var createdAttributes = new List<AttributeListSyntax> ();
 			// Some general rules for trivia in created nodes

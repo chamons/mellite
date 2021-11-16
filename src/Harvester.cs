@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -35,7 +36,7 @@ namespace mellite {
 
 	// Harvest information from a given Roslyn node for later conversion
 	public static class Harvester {
-		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member)
+		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent)
 		{
 			var existingAvailabilityAttributes = new List<AttributeSyntax> ();
 			var nonAvailabilityAttributes = new List<AttributeSyntax> ();
@@ -94,12 +95,36 @@ namespace mellite {
 				}
 			}
 
+			// If we define any availability attributes on a member and have a parent, we must copy
+			// all non-conflicting availabilities down. This is the crux of the problem this tool is to solve.
+			bool hasAnyAvailability = introducedAttributesToProcess.Any () ||
+				deprecatedAttributesToProcess.Any () ||
+				unavailableAttributesToProcess.Any () ||
+				obsoleteAttributesToProcess.Any ();
+			if (hasAnyAvailability && parent != null) {
+				HarvestedMemberInfo parentInfo = Harvester.Process (parent, null);
+				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess);
+				CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess);
+				CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess);
+				CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess);
+			}
+
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
 			// as the #if define in the block is a superset of others and must come last
 			ForceiOSToEndOfList (deprecatedAttributesToProcess);
 			ForceiOSToEndOfList (obsoleteAttributesToProcess);
 
 			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
+		}
+
+		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source)
+		{
+			foreach (var s in source) {
+				// For each attribute from our parent only copy if we don't have a matching kind (Introduced vs Introduced) that also matches platform (iOS)
+				if (!destination.Any (d => d.Name.ToString () == s.Name.ToString () && PlatformArgumentParser.GetPlatformFromNode (d) == PlatformArgumentParser.GetPlatformFromNode (s))) {
+					destination.Add (s);
+				}
+			}
 		}
 
 		static void AddIfSupportedPlatform (AttributeSyntax attribute, List<AttributeSyntax> list)
