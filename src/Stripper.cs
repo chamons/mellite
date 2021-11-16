@@ -21,10 +21,11 @@ namespace mellite {
 	// So this solves a constrained subproblem and detects only two cases:
 	// - #1 - #if NET
 	// - #2 - #if !NET
-	// and does it without using Roslyn at all.
+	// and does it without using Roslyn to parse the major structure.
 	// The reason for not using roslyn is that with #else cases, the information of #if and #endif gets 
 	// split across multiple nodes, and becomes a nightmare.
-	// Just use a dumb "read each line one at a time and process" parser
+	// Just use a dumb "read each line one at a time and process" parser/state machine, and then feed the contents to roslyn
+	// to know if the contents are just attributes. 
 	enum StripperState {
 		InsideInterestBlock,
 		WaitingForPotentialElseNotNetBlock,
