@@ -10,8 +10,8 @@ namespace mellite {
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
 		public AttributeConverterVisitor () { }
 
-		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, (ClassDeclarationSyntax?) node.Parent);
-		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, (ClassDeclarationSyntax?) node.Parent);
+		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, (BaseTypeDeclarationSyntax?) node.Parent);
+		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, (BaseTypeDeclarationSyntax?) node.Parent);
 
 		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
 		{
@@ -24,7 +24,7 @@ namespace mellite {
 		}
 
 		// An example of desired behavior - https://github.com/xamarin/xamarin-macios/blob/main/src/AudioUnit/AudioComponentDescription.cs#L166
-		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, ClassDeclarationSyntax? parent)
+		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, BaseTypeDeclarationSyntax? parent)
 		{
 			HarvestedMemberInfo info = Harvester.Process (member, parent);
 
@@ -249,8 +249,15 @@ namespace mellite {
 		{
 			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
 			var version = PlatformArgumentParser.GetVersionFromNode (node);
-			// Skip 10 - sizeof("message: \"") and last "
-			var message = node.ArgumentList?.Arguments.Count > 3 ? $" {node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
+
+			string message = "";
+			if (node.ArgumentList?.Arguments.Count > 3) {
+				var lastArg = node.ArgumentList!.Arguments.Last ().ToString ();
+				// Skip 10 - sizeof("message: \"") and last "
+				if (lastArg.StartsWith ("message:")) {
+					message = lastArg [10..^1];
+				}
+			}
 
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
 			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
