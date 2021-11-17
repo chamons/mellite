@@ -1,3 +1,4 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -8,6 +9,6 @@ namespace mellite {
 		public static SyntaxTriviaList Else = SyntaxFactory.ParseLeadingTrivia ("#else");
 		public static SyntaxTriviaList EndIf = SyntaxFactory.ParseTrailingTrivia ("#endif");
 
-		public static SyntaxTriviaList Newline = SyntaxFactory.ParseTrailingTrivia ("\r\n");
+		public static SyntaxTriviaList Newline = SyntaxFactory.ParseTrailingTrivia (Environment.NewLine);
 	}
 }
