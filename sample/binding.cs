@@ -6,7 +6,7 @@ namespace binding {
 	[Introduced (PlatformName.MacOSX, 10, 0)]
 	public partial class Class1 {
 		[Deprecated (PlatformName.iOS, 13, 0)]
-		[Obsolete (PlatformName.MacOSX, 14, 0)]
+		[Obsoleted (PlatformName.MacOSX, 14, 0)]
 		[Unavailable (PlatformName.MacCatalyst)]
 		public void Foo () { }
 
