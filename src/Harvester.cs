@@ -103,10 +103,12 @@ namespace mellite {
 				obsoleteAttributesToProcess.Any ();
 			if (hasAnyAvailability && parent != null) {
 				HarvestedMemberInfo parentInfo = Harvester.Process (parent, null);
-				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess);
-				CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess);
-				CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess);
-				CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess);
+				List<string> fullyUnavailablePlatforms = unavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
+					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
+				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+				CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+				CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+				CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
 			}
 
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
@@ -117,11 +119,15 @@ namespace mellite {
 			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
 		}
 
-		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source)
+		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source, List<string> fullyUnavailablePlatforms)
 		{
 			foreach (var s in source) {
-				// For each attribute from our parent only copy if we don't have a matching kind (Introduced vs Introduced) that also matches platform (iOS)
-				if (!destination.Any (d => d.Name.ToString () == s.Name.ToString () && PlatformArgumentParser.GetPlatformFromNode (d) == PlatformArgumentParser.GetPlatformFromNode (s))) {
+				string? platform = PlatformArgumentParser.GetPlatformFromNode (s);
+				// Only copy if we don't have a matching kind (Introduced vs Introduced) that also matches platform (iOS)
+				bool noExistingExactMatch = !destination.Any (d => d.Name.ToString () == s.Name.ToString () && PlatformArgumentParser.GetPlatformFromNode (d) == platform);
+				// If we have an unversioned "NoPlatform" for our platform, also skip
+				bool notFullyUnsupported = !fullyUnavailablePlatforms.Any (p => p == platform);
+				if (noExistingExactMatch && notFullyUnsupported) {
 					destination.Add (s);
 				}
 			}
@@ -129,7 +135,7 @@ namespace mellite {
 
 		static void AddIfSupportedPlatform (AttributeSyntax attribute, List<AttributeSyntax> list)
 		{
-			// We don't want to add Watch o IntroducedAttributesToProcess for example
+			// We don't want to add Watch to IntroducedAttributesToProcess for example
 			if (PlatformArgumentParser.GetPlatformFromNode (attribute) != null) {
 				list.Add (attribute);
 			}

@@ -103,5 +103,18 @@ namespace mellite {
 				return null;
 			}
 		}
+
+		public static string GetVersionFromNode (AttributeSyntax node)
+		{
+			switch (node.ArgumentList?.Arguments.Count) {
+			case 2: // iOS (Major, Minor)
+				return $"{node.ArgumentList!.Arguments [0]}.{node.ArgumentList!.Arguments [1]}";
+			case 3: // Introduced (Platform, Major, Minor)
+			case 4: // Introduced (Platform, Major, Minor, Message)
+				return $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
+			default:
+				return "";
+			}
+		}
 	}
 }

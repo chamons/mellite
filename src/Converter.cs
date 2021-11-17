@@ -221,7 +221,7 @@ namespace mellite {
 		{
 			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
 			if (platform != null) {
-				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{GetVersionFromNode (node)}\")");
+				var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{PlatformArgumentParser.GetVersionFromNode (node)}\")");
 				// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
 				return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("SupportedOSPlatform"), args);
 			}
@@ -233,7 +233,7 @@ namespace mellite {
 			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
 			if (platform != null) {
 				if (node.ArgumentList?.Arguments.Count > 0) {
-					var version = GetVersionFromNode (node);
+					var version = PlatformArgumentParser.GetVersionFromNode (node);
 					var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"{platform}{version}\")");
 					// Do not WithTriviaFrom here as we copied it over in VisitAttributeList with split
 					return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("UnsupportedOSPlatform"), args);
@@ -248,25 +248,12 @@ namespace mellite {
 		AttributeSyntax CreateObsoleteAttribute (AttributeSyntax node)
 		{
 			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
-			var version = GetVersionFromNode (node);
+			var version = PlatformArgumentParser.GetVersionFromNode (node);
 			// Skip 10 - sizeof("message: \"") and last "
 			var message = node.ArgumentList?.Arguments.Count > 3 ? $" {node.ArgumentList!.Arguments [3].ToString () [10..^1]}" : "";
 
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
 			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
-		}
-
-		string GetVersionFromNode (AttributeSyntax node)
-		{
-			switch (node.ArgumentList?.Arguments.Count) {
-			case 2: // iOS (Major, Minor)
-				return $"{node.ArgumentList!.Arguments [0]}.{node.ArgumentList!.Arguments [1]}";
-			case 3: // Introduced (Platform, Major, Minor)
-			case 4: // Introduced (Platform, Major, Minor, Message)
-				return $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
-			default:
-				return "";
-			}
 		}
 	}
 }

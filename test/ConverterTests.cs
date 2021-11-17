@@ -513,5 +513,93 @@ namespace binding
 }
 ");
 		}
+
+		[Fact]
+		public void RespectUnsupportedPlatformsWhenChildInheritance ()
+		{
+			TestParentAndChildConversion ("[Introduced (PlatformName.iOS, 10, 0)]",
+			"[NoiOS]",
+			@"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+#if NET
+    [SupportedOSPlatform (""ios10.0"")]
+#else
+    [Introduced (PlatformName.iOS, 10, 0)]
+#endif
+    public partial class Class1
+    {
+#if NET
+        [UnsupportedOSPlatform (""ios"")]
+#else
+        [NoiOS]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
+
+		[Fact]
+		public void MismatchedAvailabilityWhenChildInheritance ()
+		{
+			TestParentAndChildConversion ("[Introduced (PlatformName.iOS, 12, 0)]",
+			"[Unavailable (PlatformName.iOS)]",
+			@"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+#if NET
+    [SupportedOSPlatform (""ios12.0"")]
+#else
+    [Introduced (PlatformName.iOS, 12, 0)]
+#endif
+    public partial class Class1
+    {
+#if NET
+        [UnsupportedOSPlatform (""ios"")]
+#else
+        [Unavailable (PlatformName.iOS)]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
+
+		[Fact]
+		public void NonExistantParentPlatformAvailabilityWhenChildInheritance ()
+		{
+			TestParentAndChildConversion ("[Introduced (PlatformName.WatchOS, 12, 0)]",
+			"[Unavailable (PlatformName.iOS, 14, 0)]",
+			@"using System;
+using ObjCRuntime;
+
+namespace binding
+{
+#if !NET
+    [Introduced (PlatformName.WatchOS, 12, 0)]
+#endif
+    public partial class Class1
+    {
+#if NET
+        [UnsupportedOSPlatform (""ios14.0"")]
+#else
+        [Unavailable (PlatformName.iOS, 14, 0)]
+#endif
+        public void Foo () {}
+
+        public void Bar () {}
+    }
+}
+");
+		}
 	}
 }
