@@ -123,6 +123,29 @@ namespace ARKit {
 }
 ");
 		}
+
+		[Fact]
+		public void FSEventExample ()
+		{
+			TestStrip (@"#if !NET
+		static readonly FSEventStreamCallback eventsCallback = EventsCallback;
+
+		static readonly ReleaseContextCallback releaseContextCallback = FreeGCHandle;
+		internal delegate void ReleaseContextCallback (IntPtr info);
+#endif
+
+#if NET
+		[UnmanagedCallersOnly]
+#endif
+		static void FreeGCHandle (IntPtr gchandle) {}", @"		static readonly FSEventStreamCallback eventsCallback = EventsCallback;
+
+		static readonly ReleaseContextCallback releaseContextCallback = FreeGCHandle;
+		internal delegate void ReleaseContextCallback (IntPtr info);
+
+		[UnmanagedCallersOnly]
+		static void FreeGCHandle (IntPtr gchandle) {}
+");
+		}
 	}
 }
 
