@@ -256,6 +256,32 @@ namespace mellite {
 			case "Microsoft.CodeAnalysis.CSharp.Syntax.IncompleteMemberSyntax":
 				return base.Visit (node);
 			case "Microsoft.CodeAnalysis.CSharp.Syntax.AttributeListSyntax":
+				foreach (var attribute in ((AttributeListSyntax) node).Attributes) {
+					switch (attribute.Name.ToString ()) {
+					case "Mac":
+					case "iOS":
+					case "TV":
+					case "MacCatalyst":
+					case "Introduced":
+					case "Deprecated":
+					case "NoMac":
+					case "NoiOS":
+					case "NoTV":
+					case "NoMacCatalyst":
+					case "Unavailable":
+					case "Obsoleted":
+					case "NoWatch":
+					case "Watch":
+					case "UnsupportedOSPlatform":
+					case "SupportedOSPlatform":
+					case "Obsolete":
+						break;
+					default:
+						EverythingIsAvailabilityAttribute = false;
+						break;
+					}
+				}
+				break;
 			case null:
 				break;
 			default:

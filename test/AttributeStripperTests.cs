@@ -111,6 +111,56 @@ namespace mellite.tests {
 #endif
 ");
 		}
+
+		[Fact]
+		public void FSEventExample ()
+		{
+			TestStrip (@"struct FSEventStreamContext {
+		nint version; /* CFIndex: only valid value is zero */
+		internal IntPtr Info; /* void * __nullable */
+		IntPtr Retain; /* CFAllocatorRetainCallBack __nullable */
+#if NET
+		internal unsafe delegate* unmanaged<IntPtr, void> Release; /* CFAllocatorReleaseCallBack __nullable */
+#else
+		internal FSEventStream.ReleaseContextCallback Release; /* CFAllocatorReleaseCallBack __nullable */
+#endif
+		IntPtr CopyDescription; /* CFAllocatorCopyDescriptionCallBack __nullable */
+}", @"struct FSEventStreamContext {
+		nint version; /* CFIndex: only valid value is zero */
+		internal IntPtr Info; /* void * __nullable */
+		IntPtr Retain; /* CFAllocatorRetainCallBack __nullable */
+#if NET
+		internal unsafe delegate* unmanaged<IntPtr, void> Release; /* CFAllocatorReleaseCallBack __nullable */
+#else
+		internal FSEventStream.ReleaseContextCallback Release; /* CFAllocatorReleaseCallBack __nullable */
+#endif
+		IntPtr CopyDescription; /* CFAllocatorCopyDescriptionCallBack __nullable */
+}
+");
+
+			TestStrip (@"#if !NET
+		static readonly FSEventStreamCallback eventsCallback = EventsCallback;
+
+		static readonly ReleaseContextCallback releaseContextCallback = FreeGCHandle;
+		internal delegate void ReleaseContextCallback (IntPtr info);
+#endif
+
+#if NET
+		[UnmanagedCallersOnly]
+#endif
+		static void FreeGCHandle (IntPtr gchandle) {}", @"#if !NET
+		static readonly FSEventStreamCallback eventsCallback = EventsCallback;
+
+		static readonly ReleaseContextCallback releaseContextCallback = FreeGCHandle;
+		internal delegate void ReleaseContextCallback (IntPtr info);
+#endif
+
+#if NET
+		[UnmanagedCallersOnly]
+#endif
+		static void FreeGCHandle (IntPtr gchandle) {}
+");
+		}
 	}
 }
 
