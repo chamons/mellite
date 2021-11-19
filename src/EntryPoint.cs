@@ -24,7 +24,8 @@ namespace mellite {
 				{ "h|?|help", "Displays the help", v => requestedAction = ActionType.Help },
 				{ "l|list-files", "Lists files considered for processing", v => requestedAction = ActionType.ListFilesToProcess },
 				{ "i|ignore=", "Directories (relative to root) not to be considered for processing", i => locatorOptions.Ignore.Add (i) },
-				{ "strip", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
+				{ "strip-attributes", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
+				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripConditionBlocks },
 
 			};
 

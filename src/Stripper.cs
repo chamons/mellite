@@ -11,6 +11,38 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace mellite {
+
+	abstract class StripperBase {
+		protected StringBuilder File = new StringBuilder ();
+		protected StringBuilder Chunk = new StringBuilder ();
+
+		protected abstract bool InsideInterestBlock { get; }
+
+		protected virtual void Reset ()
+		{
+			File.Clear ();
+			Chunk.Clear ();
+		}
+
+		protected void Write (string line, bool skipNewLine = false)
+		{
+			var current = InsideInterestBlock ? Chunk : File;
+
+			current.Append (line);
+			if (!skipNewLine) {
+				current.Append (Environment.NewLine);
+			}
+		}
+
+		protected void FileAppend (string line, bool skipNewLine = false)
+		{
+			File.Append (line);
+			if (!skipNewLine) {
+				File.Append (Environment.NewLine);
+			}
+		}
+	}
+
 	// We want to strip blocks like this:
 	// #if NET
 	//    [UnsupportedOSPlatform (""ios13.0"")]
@@ -26,32 +58,25 @@ namespace mellite {
 	// split across multiple nodes, and becomes a nightmare.
 	// Just use a dumb "read each line one at a time and process" parser/state machine, and then feed the contents to roslyn
 	// to know if the contents are just attributes. 
-	enum StripperState {
-		InsideInterestBlock,
-		WaitingForPotentialElseNotNetBlock,
-		InsideUnrelatedBlock,
-	}
-	class Stripper {
-		Stack<StripperState> States = new Stack<StripperState> ();
+	class AttributeStripper : StripperBase {
+		enum State {
+			InsideInterestBlock,
+			WaitingForPotentialElseNotNetBlock,
+			InsideUnrelatedBlock,
+		}
+
+		Stack<State> States = new Stack<State> ();
 
 		bool HasCurrentState => States.Count > 0;
 
 		// Are we directly nested within a InsideInterestBlock (possibly within a #if as well)
-		bool InsideInterestBlock => States.Any (x => x == StripperState.InsideInterestBlock);
-		StripperState GetCurrentState (string context) => States.TryPeek (out StripperState s) ? s : throw new InvalidOperationException ($"No state found: {context}");
+		protected override bool InsideInterestBlock => States.Any (x => x == State.InsideInterestBlock);
+		State GetCurrentState (string context) => States.TryPeek (out State s) ? s : throw new InvalidOperationException ($"No state found: {context}");
 
-		StringBuilder File = new StringBuilder ();
-		StringBuilder Chunk = new StringBuilder ();
-
-		public Stripper ()
+		protected override void Reset ()
 		{
-		}
-
-		public void Reset ()
-		{
+			base.Reset ();
 			States.Clear ();
-			File.Clear ();
-			Chunk.Clear ();
 		}
 
 		public string StripText (string text)
@@ -62,30 +87,30 @@ namespace mellite {
 				var trimmedLine = line.Trim ();
 				switch (trimmedLine) {
 				case "#if NET":
-					States.Push (StripperState.InsideInterestBlock);
+					States.Push (State.InsideInterestBlock);
 					Write (line);
 					break;
 				case "#if !NET":
-					States.Push (StripperState.WaitingForPotentialElseNotNetBlock);
+					States.Push (State.WaitingForPotentialElseNotNetBlock);
 					Write (line);
 					break;
 				case string s when s.StartsWith ("#if"):
-					States.Push (StripperState.InsideUnrelatedBlock);
+					States.Push (State.InsideUnrelatedBlock);
 					Write (line);
 					break;
 				case "#else":
 					switch (GetCurrentState ("#else")) {
-					case StripperState.InsideInterestBlock:
+					case State.InsideInterestBlock:
 						// We've wrapped up the block of interest, write out chunk and move to unrelated.
 						Write (line);
 						FinishCurrentChunk (line);
 						States.Pop ();
-						States.Push (StripperState.InsideUnrelatedBlock);
+						States.Push (State.InsideUnrelatedBlock);
 						break;
-					case StripperState.WaitingForPotentialElseNotNetBlock:
+					case State.WaitingForPotentialElseNotNetBlock:
 						// We were waiting for this block
 						States.Pop ();
-						States.Push (StripperState.InsideInterestBlock);
+						States.Push (State.InsideInterestBlock);
 						Write (line);
 						break;
 					default:
@@ -95,7 +120,7 @@ namespace mellite {
 					break;
 				case "#endif":
 					Write (line);
-					if (GetCurrentState ("#endif") == StripperState.InsideInterestBlock) {
+					if (GetCurrentState ("#endif") == State.InsideInterestBlock) {
 						FinishCurrentChunk (line);
 					}
 					States.Pop ();
@@ -108,30 +133,13 @@ namespace mellite {
 			return File.ToString ();
 		}
 
-		void Write (string line, bool skipNewLine = false)
-		{
-			var current = InsideInterestBlock ? Chunk : File;
-
-			current.Append (line);
-			if (!skipNewLine) {
-				current.Append (Environment.NewLine);
-			}
-		}
-
-		void FileAppend (string line, bool skipNewLine = false)
-		{
-			File.Append (line);
-			if (!skipNewLine) {
-				File.Append (Environment.NewLine);
-			}
-		}
-
 		public void FinishCurrentChunk (string current)
 		{
 			// Skip the #if and #else or #end for analysis by roslyn
 			string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
 			if (!ContainsOnlyAttributes (section)) {
 				FileAppend (Chunk.ToString (), true);
+				Chunk.Clear ();
 				return;
 			}
 
@@ -161,6 +169,71 @@ namespace mellite {
 			root!.Accept (visitor);
 			return visitor.EverythingIsAvailabilityAttribute;
 		}
+	}
+
+	// Processing code with many #condition blocks is difficult to get right, and they aren't truly needed
+	// as we'll be adding them back with gobs of code. So strip #if NET/#if !NET and associated #else/#endif
+	// meant to run after AttributeStripper step.
+	class ConditionBlockStripper : StripperBase {
+		enum State {
+			InsideInterestBlock,
+			InsideUnrelatedBlock,
+		}
+		Stack<State> States = new Stack<State> ();
+		State GetCurrentState (string context) => States.TryPeek (out State s) ? s : throw new InvalidOperationException ($"No state found: {context}");
+
+		protected override bool InsideInterestBlock => States.Any (x => x == State.InsideInterestBlock);
+
+		protected override void Reset ()
+		{
+			base.Reset ();
+			States.Clear ();
+		}
+
+		public string StripText (string text)
+		{
+			Reset ();
+
+			foreach (var line in text.SplitLines ()) {
+				var trimmedLine = line.Trim ();
+				switch (trimmedLine) {
+				case "#if NET":
+					States.Push (State.InsideInterestBlock);
+					break;
+				case "#if !NET":
+					States.Push (State.InsideInterestBlock);
+					break;
+				case string s when s.StartsWith ("#if"):
+					States.Push (State.InsideUnrelatedBlock);
+					Write (line);
+					break;
+				case "#else":
+					// Skip writing out the else and keep looking for the #endif to skip
+					if (GetCurrentState ("#else") != State.InsideInterestBlock) {
+						Write (line);
+					}
+					break;
+				case "#endif":
+					switch (GetCurrentState ("#endif")) {
+					case State.InsideInterestBlock:
+						FileAppend (Chunk.ToString (), true);
+						Chunk.Clear ();
+						break;
+					case State.InsideUnrelatedBlock:
+						Write (line);
+						break;
+					}
+					States.Pop ();
+					break;
+				default:
+					Write (line);
+					break;
+				}
+			}
+			return File.ToString ();
+		}
+
+
 	}
 
 	// This "rewriter" verified that all contents of a #if or #else block are attributes and are safe to remove

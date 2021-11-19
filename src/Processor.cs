@@ -13,6 +13,7 @@ namespace mellite {
 	public enum ProcessSteps {
 		ConvertXamarinAttributes,
 		StripExistingNET6Attributes,
+		StripConditionBlocks,
 	};
 
 	public static class Processor {
@@ -33,7 +34,9 @@ namespace mellite {
 				root = (CompilationUnitSyntax) root!.Accept (new AttributeConverterVisitor ())!;
 				return root!.ToFullString ();
 			case ProcessSteps.StripExistingNET6Attributes:
-				return (new Stripper ()).StripText (text);
+				return (new AttributeStripper ()).StripText (text);
+			case ProcessSteps.StripConditionBlocks:
+				return (new ConditionBlockStripper ()).StripText (text);
 			default:
 				return text;
 			}

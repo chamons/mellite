@@ -3,7 +3,7 @@ using System;
 using Xunit;
 
 namespace mellite.tests {
-	public class StripperTests {
+	public class AttributeStripperTests {
 		void TestStrip (string original, string expected) => TestUtilities.TestProcess (original, ProcessSteps.StripExistingNET6Attributes, expected);
 
 		void TestMethodAttributeStripping (string originalAttributes, string expectedAttributes)
