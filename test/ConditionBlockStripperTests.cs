@@ -146,6 +146,28 @@ namespace ARKit {
 		static void FreeGCHandle (IntPtr gchandle) {}
 ");
 		}
+
+		[Fact]
+		public void CommentOnDefineLine ()
+		{
+			TestStrip (@"namespace AVFoundation {
+#if !NET
+#endif // !NET
+
+#if !NET
+#endif
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVCaptionSize {
+	}
+}
+", @"namespace AVFoundation {
+
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVCaptionSize {
+	}
+}
+");
+		}
 	}
 }
 

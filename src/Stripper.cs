@@ -7,12 +7,10 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using mellite.Utilities;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 
 namespace mellite {
 
-	abstract class StripperBase {
+	public abstract class StripperBase {
 		protected StringBuilder File = new StringBuilder ();
 		protected StringBuilder Chunk = new StringBuilder ();
 
@@ -40,6 +38,19 @@ namespace mellite {
 			if (!skipNewLine) {
 				File.Append (Environment.NewLine);
 			}
+		}
+
+		public static string TrimLine (string line)
+		{
+			int commentIndex = line.IndexOf ("//");
+			if (commentIndex != -1) {
+				line = line.Substring (0, commentIndex);
+			}
+			commentIndex = line.IndexOf ("/*");
+			if (commentIndex != -1) {
+				line = line.Substring (0, commentIndex);
+			}
+			return line.Trim ();
 		}
 	}
 
@@ -84,8 +95,7 @@ namespace mellite {
 			Reset ();
 
 			foreach (var line in text.SplitLines ()) {
-				var trimmedLine = line.Trim ();
-				switch (trimmedLine) {
+				switch (TrimLine (line)) {
 				case "#if NET":
 					States.Push (State.InsideInterestBlock);
 					Write (line);
@@ -143,7 +153,7 @@ namespace mellite {
 				return;
 			}
 
-			switch (current.Trim ()) {
+			switch (TrimLine (current)) {
 			case "#else":
 				// Invert the first if and drop the rest
 				FileAppend ("#if !NET");
@@ -195,8 +205,7 @@ namespace mellite {
 			Reset ();
 
 			foreach (var line in text.SplitLines ()) {
-				var trimmedLine = line.Trim ();
-				switch (trimmedLine) {
+				switch (TrimLine (line)) {
 				case "#if NET":
 					States.Push (State.InsideInterestBlock);
 					break;
