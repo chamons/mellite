@@ -161,6 +161,45 @@ namespace mellite.tests {
 		static void FreeGCHandle (IntPtr gchandle) {}
 ");
 		}
+
+		[Fact]
+		public void AudioUnitExample ()
+		{
+			TestStrip (@"namespace AudioUnit {
+	public class AudioUnit : DisposableObject {
+#if !XAMCORE_3_0 || MONOMAC
+#if NET
+#else
+#endif
+#endif
+
+#if !MONOMAC
+#if !NET
+		[iOS (7, 0)]
+#else
+		[UnsupportedOSPlatform (""ios13.0"")]
+#endif
+		static extern AudioComponentStatus AudioOutputUnitPublish (AudioComponentDescription inDesc, IntPtr /* CFStringRef */ inName, uint /* UInt32 */ inVersion, IntPtr /* AudioUnit */ inOutputUnit);
+#endif
+	}
+}
+", @"namespace AudioUnit {
+	public class AudioUnit : DisposableObject {
+#if !XAMCORE_3_0 || MONOMAC
+#if !NET
+#endif
+#endif
+
+#if !MONOMAC
+#if !NET
+		[iOS (7, 0)]
+#endif
+		static extern AudioComponentStatus AudioOutputUnitPublish (AudioComponentDescription inDesc, IntPtr /* CFStringRef */ inName, uint /* UInt32 */ inVersion, IntPtr /* AudioUnit */ inOutputUnit);
+#endif
+	}
+}
+");
+		}
 	}
 }
 

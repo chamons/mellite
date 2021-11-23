@@ -133,6 +133,7 @@ namespace mellite {
 					if (GetCurrentState ("#endif") == State.InsideInterestBlock) {
 						FinishCurrentChunk (line);
 					}
+					Chunk.Clear ();
 					States.Pop ();
 					break;
 				default:
@@ -149,7 +150,6 @@ namespace mellite {
 			string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
 			if (!ContainsOnlyAttributes (section)) {
 				FileAppend (Chunk.ToString (), true);
-				Chunk.Clear ();
 				return;
 			}
 
