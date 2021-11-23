@@ -1,3 +1,5 @@
+//#define STRIPPER_DEBUG
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,6 +92,12 @@ namespace mellite {
 			States.Clear ();
 		}
 
+		[System.Diagnostics.Conditional ("STRIPPER_DEBUG")]
+		void DebugLog (string line, string log)
+		{
+			Console.WriteLine ($"{new String ('	', States.Count)}{log}   // {line.Trim ()}");
+		}
+
 		public string StripText (string text)
 		{
 			Reset ();
@@ -99,14 +107,17 @@ namespace mellite {
 				case "#if NET":
 					States.Push (State.InsideInterestBlock);
 					Write (line);
+					DebugLog (line, "#if NET -> InsideInterestBlock");
 					break;
 				case "#if !NET":
 					States.Push (State.WaitingForPotentialElseNotNetBlock);
 					Write (line);
+					DebugLog (line, "#if !NET -> WaitingForPotentialElseNotNetBlock");
 					break;
 				case string s when s.StartsWith ("#if"):
 					States.Push (State.InsideUnrelatedBlock);
 					Write (line);
+					DebugLog (line, $"{s} -> InsideUnrelatedBlock");
 					break;
 				case "#else":
 					switch (GetCurrentState ("#else")) {
@@ -116,11 +127,13 @@ namespace mellite {
 						FinishCurrentChunk (line);
 						States.Pop ();
 						States.Push (State.InsideUnrelatedBlock);
+						DebugLog (line, $"#else (InsideInterestBlock) -> InsideUnrelatedBlock");
 						break;
 					case State.WaitingForPotentialElseNotNetBlock:
 						// We were waiting for this block
 						States.Pop ();
 						States.Push (State.InsideInterestBlock);
+						DebugLog (line, $"#else (WaitingForPotentialElseNotNetBlock) -> InsideInterestBlock");
 						Write (line);
 						break;
 					default:
@@ -130,10 +143,10 @@ namespace mellite {
 					break;
 				case "#endif":
 					Write (line);
+					DebugLog (line, $"#endif {State.InsideInterestBlock}");
 					if (GetCurrentState ("#endif") == State.InsideInterestBlock) {
 						FinishCurrentChunk (line);
 					}
-					Chunk.Clear ();
 					States.Pop ();
 					break;
 				default:
@@ -146,26 +159,31 @@ namespace mellite {
 
 		public void FinishCurrentChunk (string current)
 		{
-			// Skip the #if and #else or #end for analysis by roslyn
-			string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
-			if (!ContainsOnlyAttributes (section)) {
-				FileAppend (Chunk.ToString (), true);
-				return;
-			}
-
-			switch (TrimLine (current)) {
-			case "#else":
-				// Invert the first if and drop the rest
-				FileAppend ("#if !NET");
-				break;
-			case "#endif":
-				// If our first line is #else then replace with #endif, otherwise drop everything
-				if (Chunk!.ToString ().SplitLines ().First () == "#else") {
-					FileAppend ("#endif");
+			try {
+				// Skip the #if and #else or #end for analysis by roslyn
+				string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
+				if (!ContainsOnlyAttributes (section)) {
+					FileAppend (Chunk.ToString (), true);
+					return;
 				}
-				break;
-			default:
-				throw new NotImplementedException ();
+
+				switch (TrimLine (current)) {
+				case "#else":
+					// Invert the first if and drop the rest
+					FileAppend ("#if !NET");
+					break;
+				case "#endif":
+					// If our first line is #else then replace with #endif, otherwise drop everything
+					var lines = Chunk!.ToString ().SplitLines ();
+					if (TrimLine (lines.First ()) == "#else") {
+						FileAppend (lines.Last ());
+					}
+					break;
+				default:
+					throw new NotImplementedException ();
+				}
+			} finally {
+				Chunk.Clear ();
 			}
 		}
 

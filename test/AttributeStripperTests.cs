@@ -200,6 +200,57 @@ namespace mellite.tests {
 }
 ");
 		}
+
+		[Fact]
+		public void SecExample ()
+		{
+			TestStrip (@"namespace Security {
+	public partial class SecCertificate : NativeObject {
+#if !COREBUILD
+	#if !__MACCATALYST__ // Neither the macOS nor the non-MacOS one works on Mac Catalyst
+		#if MONOMAC
+			#if !NET
+				[Deprecated (PlatformName.MacOSX, 10,14)]
+			#else
+				[UnsupportedOSPlatform (""macos10.14"")]
+				#if MONOMAC
+				#endif
+			#endif
+		#else
+			#if !NET
+			#else
+			#endif
+			#if !NET
+			#else
+				#if IOS
+				#elif TVOS
+				#endif
+			#endif
+		#endif
+	#endif
+#endif
+	}
+}
+", @"namespace Security {
+	public partial class SecCertificate : NativeObject {
+#if !COREBUILD
+	#if !__MACCATALYST__ // Neither the macOS nor the non-MacOS one works on Mac Catalyst
+		#if MONOMAC
+			#if !NET
+				[Deprecated (PlatformName.MacOSX, 10,14)]
+			#endif
+		#else
+			#if !NET
+			#endif
+			#if !NET
+			#endif
+		#endif
+	#endif
+#endif
+	}
+}
+");
+		}
 	}
 }
 
