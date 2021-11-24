@@ -601,5 +601,35 @@ namespace binding
 }
 ");
 		}
+
+		[Fact]
+		public void ConvertWithIfInLeading ()
+		{
+			TestConversion (@"namespace UIKit {
+
+	public static partial class UIGuidedAccessRestriction {
+#if !COREBUILD
+		[iOS (7,0)]
+		[DllImport (Constants.UIKitLibrary)]
+		extern static /* UIGuidedAccessRestrictionState */ nint UIGuidedAccessRestrictionStateForIdentifier (/* NSString */ IntPtr restrictionIdentifier);
+#endif // !COREBUILD
+	}
+}
+", @"namespace UIKit {
+
+	public static partial class UIGuidedAccessRestriction {
+#if !COREBUILD
+		[DllImport (Constants.UIKitLibrary)]
+#if NET
+		[SupportedOSPlatform (""ios7.0"")]
+#else
+		[iOS (7,0)]
+#endif
+		extern static /* UIGuidedAccessRestrictionState */ nint UIGuidedAccessRestrictionStateForIdentifier (/* NSString */ IntPtr restrictionIdentifier);
+#endif // !COREBUILD
+	}
+}
+");
+		}
 	}
 }

@@ -196,6 +196,12 @@ namespace mellite {
 
 				AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
 			}
+
+			// Now that we have the final list, apply any NonWhitespaceTrivia to the very first attribute in the list
+			if (info.NonWhitespaceTrivia.Any () && finalAttributes.Any ()) {
+				finalAttributes [0] = finalAttributes [0].WithLeadingTrivia (info.NonWhitespaceTrivia.AddRange (finalAttributes [0].GetLeadingTrivia ()));
+			}
+
 			return finalAttributes;
 		}
 

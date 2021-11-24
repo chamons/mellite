@@ -16,10 +16,14 @@ namespace mellite {
 		public ReadOnlyCollection<AttributeSyntax> UnavailableAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> ObsoleteAttributesToProcess;
 
+		// This is a bit of a hack. #if and such can be added to the trivia of our first node, and we want those, only once, before
+		// any attributes. So store them off separate for now.
+		public SyntaxTriviaList NonWhitespaceTrivia;
+
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<AttributeSyntax> existingAvailabilityAttributes, List<AttributeSyntax> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		public HarvestedMemberInfo (List<AttributeSyntax> existingAvailabilityAttributes, List<AttributeSyntax> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
 		{
 			ExistingAvailabilityAttributes = existingAvailabilityAttributes.AsReadOnly ();
 			NonAvailabilityAttributes = nonAvailabilityAttributes.AsReadOnly ();
@@ -29,6 +33,7 @@ namespace mellite {
 			UnavailableAttributesToProcess = unavailableAttributesToProcess.AsReadOnly ();
 			ObsoleteAttributesToProcess = obsoleteAttributesToProcess.AsReadOnly ();
 
+			NonWhitespaceTrivia = nonWhitespaceTrivia ?? new SyntaxTriviaList ();
 			NewlineTrivia = newlineTrivia ?? new SyntaxTriviaList ();
 			IndentTrivia = indentTrivia ?? new SyntaxTriviaList ();
 		}
@@ -46,11 +51,12 @@ namespace mellite {
 			var unavailableAttributesToProcess = new List<AttributeSyntax> ();
 			var obsoleteAttributesToProcess = new List<AttributeSyntax> ();
 
+			SyntaxTriviaList? nonWhitespaceTrivia = null;
 			SyntaxTriviaList? newlineTrivia = null;
 			SyntaxTriviaList? indentTrivia = null;
 			foreach (var attributeList in member.AttributeLists) {
 				if (newlineTrivia == null) {
-					(newlineTrivia, indentTrivia) = SplitNodeTrivia (attributeList);
+					(nonWhitespaceTrivia, newlineTrivia, indentTrivia) = SplitNodeTrivia (attributeList);
 				}
 
 				foreach (var attribute in attributeList.Attributes) {
@@ -116,7 +122,7 @@ namespace mellite {
 			ForceiOSToEndOfList (deprecatedAttributesToProcess);
 			ForceiOSToEndOfList (obsoleteAttributesToProcess);
 
-			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, newlineTrivia, indentTrivia);
+			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, nonWhitespaceTrivia, newlineTrivia, indentTrivia);
 		}
 
 		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source, List<string> fullyUnavailablePlatforms)
@@ -165,14 +171,20 @@ namespace mellite {
 		// We want to copy just the later (Tab) to the synthesized attributes
 		// and put the newline BEFORE the #if if
 		// So split the trivia to everything before and including the last newline and everything else
-		static (SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia (SyntaxNode node)
+		static (SyntaxTriviaList, SyntaxTriviaList, SyntaxTriviaList) SplitNodeTrivia (SyntaxNode node)
 		{
+			var nonWhitespaceTrivia = new SyntaxTriviaList ();
 			var newlines = new SyntaxTriviaList ();
 			var rest = new SyntaxTriviaList ();
 
 			// XXX - this could be more efficient if we find the split point and bulk copy
 			bool foundSplit = false;
 			foreach (var trivia in node.GetLeadingTrivia ().Reverse ()) {
+				// If we come across any non-whitespace trivia, hoist in up front. Let's hope this is close enough...
+				if (!String.IsNullOrWhiteSpace (trivia.ToString ())) {
+					nonWhitespaceTrivia = nonWhitespaceTrivia.Add (trivia);
+					continue;
+				}
 				if (trivia.ToFullString () == "\r\n" || trivia.ToFullString () == "\n") {
 					foundSplit = true;
 				}
@@ -183,7 +195,7 @@ namespace mellite {
 					rest = rest.Add (trivia);
 				}
 			}
-			return (new SyntaxTriviaList (newlines.Reverse ()), new SyntaxTriviaList (rest.Reverse ()));
+			return (new SyntaxTriviaList (nonWhitespaceTrivia.Reverse ()), new SyntaxTriviaList (newlines.Reverse ()), new SyntaxTriviaList (rest.Reverse ()));
 		}
 	}
 
