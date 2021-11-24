@@ -10,8 +10,8 @@ namespace mellite {
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
 		public AttributeConverterVisitor () { }
 
-		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, (BaseTypeDeclarationSyntax?) node.Parent);
-		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, (BaseTypeDeclarationSyntax?) node.Parent);
+		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
+		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 
 		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
 		{

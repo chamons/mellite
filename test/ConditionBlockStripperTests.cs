@@ -5,6 +5,7 @@ using Xunit;
 namespace mellite.tests {
 	public class ConditionaBlockStripperTests {
 		void TestStrip (string original, string expected) => TestUtilities.TestProcess (original, ProcessSteps.StripConditionBlocks, expected);
+		void TestStripToSame (string original) => TestUtilities.TestProcess (original, ProcessSteps.StripConditionBlocks, original);
 
 		void TestBlockStripping (string originalAttributes, string expectedAttributes)
 		{
@@ -127,7 +128,7 @@ namespace ARKit {
 		[Fact]
 		public void FSEventExample ()
 		{
-			TestStrip (@"#if !NET
+			TestStripToSame (@"#if !NET
 		static readonly FSEventStreamCallback eventsCallback = EventsCallback;
 
 		static readonly ReleaseContextCallback releaseContextCallback = FreeGCHandle;
@@ -137,12 +138,6 @@ namespace ARKit {
 #if NET
 		[UnmanagedCallersOnly]
 #endif
-		static void FreeGCHandle (IntPtr gchandle) {}", @"		static readonly FSEventStreamCallback eventsCallback = EventsCallback;
-
-		static readonly ReleaseContextCallback releaseContextCallback = FreeGCHandle;
-		internal delegate void ReleaseContextCallback (IntPtr info);
-
-		[UnmanagedCallersOnly]
 		static void FreeGCHandle (IntPtr gchandle) {}
 ");
 		}
@@ -166,6 +161,17 @@ namespace ARKit {
 	public struct AVCaptionSize {
 	}
 }
+");
+		}
+
+		[Fact]
+		public void StripOnlyAttributes ()
+		{
+			TestStripToSame (@"#if NET
+        public class MidiMetaEvent : MidiData {
+#else
+        public class MidiMetaEvent : _MidiData {
+#endif
 ");
 		}
 	}

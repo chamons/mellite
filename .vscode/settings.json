@@ -6,8 +6,10 @@
     "cSpell.words": [
         "BGENERATOR",
         "cctor",
+        "gchandle",
         "libc",
         "mkdir",
+        "nint",
         "tvos",
         "watchos",
         "WATCHOS",

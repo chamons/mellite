@@ -7,10 +7,10 @@ namespace mellite.tests {
 		[Fact]
 		public void StripCommentTests ()
 		{
-			Assert.Equal ("[Foo]", StripperBase.TrimLine ("[Foo]"));
-			Assert.Equal ("[Foo]", StripperBase.TrimLine ("[Foo]  "));
-			Assert.Equal ("[Foo]", StripperBase.TrimLine ("[Foo] // Comment"));
-			Assert.Equal ("[Foo]", StripperBase.TrimLine ("[Foo] /* Comment */"));
+			Assert.Equal ("[Foo]", StripperHelpers.TrimLine ("[Foo]"));
+			Assert.Equal ("[Foo]", StripperHelpers.TrimLine ("[Foo]  "));
+			Assert.Equal ("[Foo]", StripperHelpers.TrimLine ("[Foo] // Comment"));
+			Assert.Equal ("[Foo]", StripperHelpers.TrimLine ("[Foo] /* Comment */"));
 		}
 	}
 }

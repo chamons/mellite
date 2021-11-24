@@ -11,37 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using mellite.Utilities;
 
 namespace mellite {
-
-	public abstract class StripperBase {
-		protected StringBuilder File = new StringBuilder ();
-		protected StringBuilder Chunk = new StringBuilder ();
-
-		protected abstract bool InsideInterestBlock { get; }
-
-		protected virtual void Reset ()
-		{
-			File.Clear ();
-			Chunk.Clear ();
-		}
-
-		protected void Write (string line, bool skipNewLine = false)
-		{
-			var current = InsideInterestBlock ? Chunk : File;
-
-			current.Append (line);
-			if (!skipNewLine) {
-				current.Append (Environment.NewLine);
-			}
-		}
-
-		protected void FileAppend (string line, bool skipNewLine = false)
-		{
-			File.Append (line);
-			if (!skipNewLine) {
-				File.Append (Environment.NewLine);
-			}
-		}
-
+	public static class StripperHelpers {
 		public static string TrimLine (string line)
 		{
 			int commentIndex = line.IndexOf ("//");
@@ -53,6 +23,20 @@ namespace mellite {
 				line = line.Substring (0, commentIndex);
 			}
 			return line.Trim ();
+		}
+
+		public static bool ChunkContainsOnlyAttributes (string chunk)
+		{
+			// Skip the #if and #else or #end for analysis by roslyn
+			string section = String.Join ('\n', chunk.SplitLines ().Skip (1).SkipLast (1));
+
+			SyntaxTree tree = CSharpSyntaxTree.ParseText (section);
+
+			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
+
+			var visitor = new TriviaContentsVisitor ();
+			root!.Accept (visitor);
+			return visitor.EverythingIsAvailabilityAttribute;
 		}
 	}
 
@@ -71,24 +55,45 @@ namespace mellite {
 	// split across multiple nodes, and becomes a nightmare.
 	// Just use a dumb "read each line one at a time and process" parser/state machine, and then feed the contents to roslyn
 	// to know if the contents are just attributes. 
-	class AttributeStripper : StripperBase {
+	class AttributeStripper {
 		enum State {
 			InsideInterestBlock,
 			WaitingForPotentialElseNotNetBlock,
 			InsideUnrelatedBlock,
 		}
 
+		StringBuilder File = new StringBuilder ();
+		StringBuilder Chunk = new StringBuilder ();
 		Stack<State> States = new Stack<State> ();
 
 		bool HasCurrentState => States.Count > 0;
 
 		// Are we directly nested within a InsideInterestBlock (possibly within a #if as well)
-		protected override bool InsideInterestBlock => States.Any (x => x == State.InsideInterestBlock);
+		bool InsideInterestBlock => States.Any (x => x == State.InsideInterestBlock);
 		State GetCurrentState (string context) => States.TryPeek (out State s) ? s : throw new InvalidOperationException ($"No state found: {context}");
 
-		protected override void Reset ()
+		void Write (string line, bool skipNewLine = false)
 		{
-			base.Reset ();
+			var current = InsideInterestBlock ? Chunk : File;
+
+			current.Append (line);
+			if (!skipNewLine) {
+				current.Append (Environment.NewLine);
+			}
+		}
+
+		void FileAppend (string line, bool skipNewLine = false)
+		{
+			File.Append (line);
+			if (!skipNewLine) {
+				File.Append (Environment.NewLine);
+			}
+		}
+
+		void Reset ()
+		{
+			File.Clear ();
+			Chunk.Clear ();
 			States.Clear ();
 		}
 
@@ -103,7 +108,7 @@ namespace mellite {
 			Reset ();
 
 			foreach (var line in text.SplitLines ()) {
-				switch (TrimLine (line)) {
+				switch (StripperHelpers.TrimLine (line)) {
 				case "#if NET":
 					States.Push (State.InsideInterestBlock);
 					Write (line);
@@ -160,14 +165,12 @@ namespace mellite {
 		public void FinishCurrentChunk (string current)
 		{
 			try {
-				// Skip the #if and #else or #end for analysis by roslyn
-				string section = String.Join ('\n', Chunk!.ToString ().SplitLines ().Skip (1).SkipLast (1));
-				if (!ContainsOnlyAttributes (section)) {
+				if (!StripperHelpers.ChunkContainsOnlyAttributes (Chunk!.ToString ())) {
 					FileAppend (Chunk.ToString (), true);
 					return;
 				}
 
-				switch (TrimLine (current)) {
+				switch (StripperHelpers.TrimLine (current)) {
 				case "#else":
 					// Invert the first if and drop the rest
 					FileAppend ("#if !NET");
@@ -175,7 +178,7 @@ namespace mellite {
 				case "#endif":
 					// If our first line is #else then replace with #endif, otherwise drop everything
 					var lines = Chunk!.ToString ().SplitLines ();
-					if (TrimLine (lines.First ()) == "#else") {
+					if (StripperHelpers.TrimLine (lines.First ()) == "#else") {
 						FileAppend (lines.Last ());
 					}
 					break;
@@ -186,36 +189,60 @@ namespace mellite {
 				Chunk.Clear ();
 			}
 		}
-
-		public bool ContainsOnlyAttributes (string text)
-		{
-			SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
-
-			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
-
-			var visitor = new TriviaContentsVisitor ();
-			root!.Accept (visitor);
-			return visitor.EverythingIsAvailabilityAttribute;
-		}
 	}
 
 	// Processing code with many #condition blocks is difficult to get right, and they aren't truly needed
 	// as we'll be adding them back with gobs of code. So strip #if NET/#if !NET and associated #else/#endif
-	// meant to run after AttributeStripper step.
-	class ConditionBlockStripper : StripperBase {
+	// meant to run after AttributeStripper step. Only strip if the contents are only attributes.
+	class ConditionBlockStripper {
 		enum State {
 			InsideInterestBlock,
 			InsideUnrelatedBlock,
 		}
+
 		Stack<State> States = new Stack<State> ();
 		State GetCurrentState (string context) => States.TryPeek (out State s) ? s : throw new InvalidOperationException ($"No state found: {context}");
 
-		protected override bool InsideInterestBlock => States.Any (x => x == State.InsideInterestBlock);
+		StringBuilder File = new StringBuilder ();
+		StringBuilder Chunk = new StringBuilder ();
+		// Write each line in Chunk and ConditionalLessChunk, except for #if/#else/#endif
+		// If we determine the block is ChunkContainsOnlyAttributes, then write this instead of Chunk
+		protected StringBuilder ConditionalLessChunk = new StringBuilder ();
 
-		protected override void Reset ()
+		bool InsideInterestBlock => States.Any (x => x == State.InsideInterestBlock);
+
+		void Write (string line, bool isConditionDefine, bool skipNewLine = false)
 		{
-			base.Reset ();
+			if (InsideInterestBlock) {
+				Chunk.Append (line);
+				if (!skipNewLine) {
+					Chunk.Append (Environment.NewLine);
+				}
+				if (!isConditionDefine) {
+					ConditionalLessChunk.Append (line);
+					if (!skipNewLine) {
+						ConditionalLessChunk.Append (Environment.NewLine);
+					}
+				}
+			} else {
+				FileAppend (line, skipNewLine);
+			}
+		}
+
+		void FileAppend (string line, bool skipNewLine = false)
+		{
+			File.Append (line);
+			if (!skipNewLine) {
+				File.Append (Environment.NewLine);
+			}
+		}
+
+		void Reset ()
+		{
+			File.Clear ();
+			Chunk.Clear ();
 			States.Clear ();
+			ConditionalLessChunk.Clear ();
 		}
 
 		public string StripText (string text)
@@ -223,37 +250,39 @@ namespace mellite {
 			Reset ();
 
 			foreach (var line in text.SplitLines ()) {
-				switch (TrimLine (line)) {
+				switch (StripperHelpers.TrimLine (line)) {
 				case "#if NET":
-					States.Push (State.InsideInterestBlock);
-					break;
 				case "#if !NET":
 					States.Push (State.InsideInterestBlock);
+					Write (line, true);
 					break;
 				case string s when s.StartsWith ("#if"):
 					States.Push (State.InsideUnrelatedBlock);
-					Write (line);
+					Write (line, false);
 					break;
 				case "#else":
-					// Skip writing out the else and keep looking for the #endif to skip
-					if (GetCurrentState ("#else") != State.InsideInterestBlock) {
-						Write (line);
-					}
+					Write (line, GetCurrentState ("#else") == State.InsideInterestBlock);
 					break;
 				case "#endif":
 					switch (GetCurrentState ("#endif")) {
 					case State.InsideInterestBlock:
-						FileAppend (Chunk.ToString (), true);
+						Write (line, true);
+						if (StripperHelpers.ChunkContainsOnlyAttributes (Chunk!.ToString ())) {
+							FileAppend (ConditionalLessChunk.ToString (), true);
+						} else {
+							FileAppend (Chunk.ToString (), true);
+						}
 						Chunk.Clear ();
+						ConditionalLessChunk.Clear ();
 						break;
 					case State.InsideUnrelatedBlock:
-						Write (line);
+						Write (line, false);
 						break;
 					}
 					States.Pop ();
 					break;
 				default:
-					Write (line);
+					Write (line, false);
 					break;
 				}
 			}

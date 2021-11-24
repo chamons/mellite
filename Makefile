@@ -13,3 +13,8 @@ reset::
 
 test::
 	$(Q) dotnet test --nologo test/mellite.tests.csproj
+
+convert::
+	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/ --strip-attributes
+	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/ --strip-blocks
+	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/
