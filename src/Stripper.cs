@@ -310,7 +310,16 @@ namespace mellite {
 		{
 			switch (node?.GetType ().ToString ()) {
 			case "Microsoft.CodeAnalysis.CSharp.Syntax.IncompleteMemberSyntax":
-				return base.Visit (node);
+				switch (StripperHelpers.TrimLine (node.ToString ())) {
+				case "internal":
+				case "public":
+					// Roslyn shows all of this as "incomplete" but special case internal/public
+					EverythingIsAvailabilityAttribute = false;
+					break;
+				default:
+					return base.Visit (node);
+				}
+				break;
 			case "Microsoft.CodeAnalysis.CSharp.Syntax.AttributeListSyntax":
 				foreach (var attribute in ((AttributeListSyntax) node).Attributes) {
 					switch (attribute.Name.ToString ()) {

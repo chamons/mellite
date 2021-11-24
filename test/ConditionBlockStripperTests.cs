@@ -173,6 +173,12 @@ namespace ARKit {
         public class MidiMetaEvent : _MidiData {
 #endif
 ");
+
+			TestStripToSame (@"#if !NET
+			internal
+#endif
+			protected override bool TryComputeLength (out long length)
+");
 		}
 	}
 }
