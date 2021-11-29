@@ -701,5 +701,33 @@ namespace binding
 	}
 ");
 		}
+
+
+		[Fact]
+		public void AttributesWithComments ()
+		{
+			TestConversionToSame (@"namespace Accessibility {
+	public static partial class AXHearingUtilities {
+		[return: MarshalAs (UnmanagedType.I1)] // This is a comment
+		public static extern bool SupportsBidirectionalStreaming ();
+	}
+");
+
+			TestConversion (@"namespace Accessibility {
+	public static partial class AXHearingUtilities {
+		[iOS (7,0)] // This is another comment
+		public static extern bool SupportsBidirectionalStreaming ();
+	}
+", @"namespace Accessibility {
+	public static partial class AXHearingUtilities {
+#if NET
+		[SupportedOSPlatform (""ios7.0"")]
+#else
+		[iOS (7,0)] // This is another comment
+#endif
+		public static extern bool SupportsBidirectionalStreaming ();
+	}
+");
+		}
 	}
 }
