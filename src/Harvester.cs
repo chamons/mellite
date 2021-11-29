@@ -6,6 +6,8 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using mellite.Utilities;
+
 namespace mellite {
 	public class HarvestedMemberInfo {
 		public ReadOnlyCollection<AttributeSyntax> ExistingAvailabilityAttributes;
@@ -179,12 +181,16 @@ namespace mellite {
 
 			// XXX - this could be more efficient if we find the split point and bulk copy
 			bool foundSplit = false;
-			foreach (var trivia in node.GetLeadingTrivia ().Reverse ()) {
-				// If we come across any non-whitespace trivia, hoist in up front. Let's hope this is close enough...
-				if (!String.IsNullOrWhiteSpace (trivia.ToString ())) {
-					nonWhitespaceTrivia = nonWhitespaceTrivia.Add (trivia);
-					continue;
-				}
+			var triviaToProcess = node.GetLeadingTrivia ();
+
+			// If we come across any non-whitespace trivia, hoist it and all elements before it to nonWhitespaceTrivia
+			int lastNonWhiteSpaceTrivia = triviaToProcess.IndexOf (x => !String.IsNullOrWhiteSpace (x.ToString ()));
+			if (lastNonWhiteSpaceTrivia != -1) {
+				nonWhitespaceTrivia = nonWhitespaceTrivia.AddRange (triviaToProcess.Take (lastNonWhiteSpaceTrivia + 1));
+				triviaToProcess = new SyntaxTriviaList (triviaToProcess.Skip (lastNonWhiteSpaceTrivia + 1));
+			}
+
+			foreach (var trivia in triviaToProcess.Reverse ()) {
 				if (trivia.ToFullString () == "\r\n" || trivia.ToFullString () == "\n") {
 					foundSplit = true;
 				}
@@ -195,7 +201,7 @@ namespace mellite {
 					rest = rest.Add (trivia);
 				}
 			}
-			return (new SyntaxTriviaList (nonWhitespaceTrivia.Reverse ()), new SyntaxTriviaList (newlines.Reverse ()), new SyntaxTriviaList (rest.Reverse ()));
+			return (new SyntaxTriviaList (nonWhitespaceTrivia), new SyntaxTriviaList (newlines.Reverse ()), new SyntaxTriviaList (rest.Reverse ()));
 		}
 	}
 
