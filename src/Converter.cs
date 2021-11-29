@@ -145,13 +145,6 @@ namespace mellite {
 		{
 			List<AttributeListSyntax> finalAttributes = new List<AttributeListSyntax> ();
 
-			// First generate all attributes unrelated to availability
-			foreach (var attribute in info.NonAvailabilityAttributes) {
-				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
-				// So add info.IndentTrivia here by hand
-				finalAttributes.Add (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline));
-			}
-
 			// We want to generate:
 			// #if NET
 			// CONVERTED_ATTRIBUTES
@@ -195,6 +188,13 @@ namespace mellite {
 				trailing.AddRange (TriviaConstants.Newline);
 
 				AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
+			}
+
+			// Last generate all attributes unrelated to availability
+			foreach (var attribute in info.NonAvailabilityAttributes) {
+				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
+				// So add info.IndentTrivia here by hand
+				finalAttributes.Add (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline));
 			}
 
 			// Now that we have the final list, apply any NonWhitespaceTrivia to the very first attribute in the list

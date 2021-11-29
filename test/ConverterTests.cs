@@ -228,13 +228,13 @@ namespace binding
 {
     public partial class Class1
     {
-        [Flags]
-        [Obsolete]
 #if NET
         [UnsupportedOSPlatform (""ios11.0"")]
 #else
         [Unavailable (PlatformName.iOS, 11, 0)]
 #endif
+        [Flags]
+        [Obsolete]
         public void Foo () {}
 
         public void Bar () {}
@@ -619,12 +619,12 @@ namespace binding
 
 	public static partial class UIGuidedAccessRestriction {
 #if !COREBUILD
-		[DllImport (Constants.UIKitLibrary)]
 #if NET
 		[SupportedOSPlatform (""ios7.0"")]
 #else
 		[iOS (7,0)]
 #endif
+		[DllImport (Constants.UIKitLibrary)]
 		extern static /* UIGuidedAccessRestrictionState */ nint UIGuidedAccessRestrictionStateForIdentifier (/* NSString */ IntPtr restrictionIdentifier);
 #endif // !COREBUILD
 	}
