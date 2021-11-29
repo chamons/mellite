@@ -157,17 +157,21 @@ namespace mellite {
 
 			// That is UNLESS EXISTING_ATTRIBUTES has zero elements but CONVERTED_ATTRIBUTES has some, which is possible with watch for example
 			// Then we generate the existing attributes with #if !NET and #endif only
+			bool newLinesAdded;
 			if (createdAttributes.Count == 0 && info.ExistingAvailabilityAttributes.Count > 0) {
 				var leading = new List<SyntaxTrivia> ();
+
+				// These blocks look just like the else case block, but are different IfNot vs If, EndIf vs Else 
 				leading.AddRange (info.NewlineTrivia);
 				leading.AddRange (TriviaConstants.IfNotNet);
 				leading.AddRange (TriviaConstants.Newline);
+
 				var trailing = new List<SyntaxTrivia> ();
 				trailing.AddRange (TriviaConstants.EndIf);
 				trailing.AddRange (TriviaConstants.Newline);
 
 				var attributes = info.ExistingAvailabilityAttributes.Select (x => x.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline)).ToList ();
-				AddToListWithLeadingTrailing (finalAttributes, attributes, leading, trailing);
+				newLinesAdded = AddToListWithLeadingTrailing (finalAttributes, attributes, leading, trailing);
 			} else {
 				var leading = new List<SyntaxTrivia> ();
 				leading.AddRange (info.NewlineTrivia);
@@ -187,14 +191,18 @@ namespace mellite {
 				trailing.AddRange (TriviaConstants.EndIf);
 				trailing.AddRange (TriviaConstants.Newline);
 
-				AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
+				newLinesAdded = AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
 			}
 
-			// Last generate all attributes unrelated to availability
-			foreach (var attribute in info.NonAvailabilityAttributes) {
+			for (int i = 0; i < info.NonAvailabilityAttributes.Count; ++i) {
 				// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
 				// So add info.IndentTrivia here by hand
-				finalAttributes.Add (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline));
+				var attribute = info.NonAvailabilityAttributes [i].ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).WithTrailingTrivia (TriviaConstants.Newline);
+				// If we added zero items above, then we are responsible to prepend info.NewlineTrivia to our first element 
+				if (i == 0 && !newLinesAdded) {
+					attribute = attribute.WithLeadingTrivia (info.NewlineTrivia.AddRange (attribute.GetLeadingTrivia ()));
+				}
+				finalAttributes.Add (attribute);
 			}
 
 			// Now that we have the final list, apply any NonWhitespaceTrivia to the very first attribute in the list
@@ -206,7 +214,7 @@ namespace mellite {
 		}
 
 		// Add each attribute to finalAttributes, appending leading trivia to first and trailing to last element
-		void AddToListWithLeadingTrailing (List<AttributeListSyntax> finalAttributes, IList<AttributeListSyntax> attributes, List<SyntaxTrivia> leading, List<SyntaxTrivia> trailing)
+		bool AddToListWithLeadingTrailing (List<AttributeListSyntax> finalAttributes, IList<AttributeListSyntax> attributes, List<SyntaxTrivia> leading, List<SyntaxTrivia> trailing)
 		{
 			for (int i = 0; i < attributes.Count; i += 1) {
 				var attribute = attributes [i];
@@ -221,6 +229,7 @@ namespace mellite {
 				}
 				finalAttributes.Add (attribute);
 			}
+			return attributes.Count > 0;
 		}
 
 		AttributeSyntax? ProcessSupportedAvailabilityNode (AttributeSyntax node)

@@ -6,6 +6,7 @@ namespace mellite.tests {
 	public class ConverterTests {
 
 		void TestConversion (string original, string expected) => TestUtilities.TestProcess (original, ProcessSteps.ConvertXamarinAttributes, expected);
+		void TestConversionToSame (string original) => TestUtilities.TestProcess (original, ProcessSteps.ConvertXamarinAttributes, original);
 
 		void TestClassAttributeConversion (string xamarinAttribute, string newAttribute, string? xamarinAttributeAfterConvert = null)
 		{
@@ -630,6 +631,23 @@ namespace binding
 	}
 }
 ");
+		}
+
+		[Fact]
+		public void NewLineEating ()
+		{
+			TestConversionToSame (@"#if !XAMCORE_3_0
+	partial class AVAsset {
+
+		[Obsolete (""Use 'GetChapterMetadataGroups'."")]
+		public virtual AVMetadataItem[] ChapterMetadataGroups (NSLocale forLocale, AVMetadataItem[] commonKeys)
+		{
+
+		}
+	}
+#endif
+"
+);
 		}
 	}
 }
