@@ -7,6 +7,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using mellite;
+
 namespace mellite.Utilities {
 	public static class RoslynExtensions {
 		public static AttributeListSyntax ToAttributeList (this AttributeSyntax createdAttribute)
@@ -17,6 +19,23 @@ namespace mellite.Utilities {
 			}
 			var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
 			return SyntaxFactory.AttributeList (netAttributeElements);
+		}
+
+		public static AttributeListSyntax ToAttributeList (this (AttributeSyntax, string?) createdAttributeInfo)
+		{
+			if (createdAttributeInfo.Item2 == null) {
+				return createdAttributeInfo.Item1.ToAttributeList ();
+			} else {
+				AttributeSyntax createdAttribute = createdAttributeInfo.Item1;
+				// Add a ' ' between Attribute and attribute '(' if there is a '('
+				if (createdAttribute.ArgumentList?.Arguments.Count > 0) {
+					createdAttribute = createdAttribute.WithName (createdAttribute.Name.WithTrailingTrivia (TriviaConstants.Space));
+				}
+				var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
+				// Remove the trailing : from the parsed target, as AttributeTargetSpecifier will re-add it
+				var target = SyntaxFactory.AttributeTargetSpecifier (SyntaxFactory.Identifier (createdAttributeInfo.Item2.TrimEnd (':'))).WithTrailingTrivia (TriviaConstants.Space);
+				return SyntaxFactory.AttributeList (target, netAttributeElements);
+			}
 		}
 	}
 

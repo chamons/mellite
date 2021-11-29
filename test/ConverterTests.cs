@@ -689,5 +689,17 @@ namespace binding
 	}
 ");
 		}
+
+		[Fact]
+		public void ReturnAs ()
+		{
+			TestConversionToSame (@"namespace Accessibility {
+	public static partial class AXHearingUtilities {
+		[DllImport (Constants.AccessibilityLibrary, EntryPoint = ""AXSupportsBidirectionalAXMFiHearingDeviceStreaming"")]
+		[return: MarshalAs (UnmanagedType.I1)]
+		public static extern bool SupportsBidirectionalStreaming ();
+	}
+");
+		}
 	}
 }

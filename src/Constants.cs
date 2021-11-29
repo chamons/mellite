@@ -10,5 +10,7 @@ namespace mellite {
 		public static SyntaxTriviaList EndIf = SyntaxFactory.ParseTrailingTrivia ("#endif");
 
 		public static SyntaxTriviaList Newline = SyntaxFactory.ParseTrailingTrivia (Environment.NewLine);
+		public static SyntaxTriviaList Space = SyntaxFactory.ParseLeadingTrivia (" ");
+
 	}
 }

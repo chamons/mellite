@@ -11,7 +11,9 @@ using mellite.Utilities;
 namespace mellite {
 	public class HarvestedMemberInfo {
 		public ReadOnlyCollection<AttributeSyntax> ExistingAvailabilityAttributes;
-		public ReadOnlyCollection<AttributeSyntax> NonAvailabilityAttributes;
+		// We support attributes with target: syntax only on non-availability attributes, so store an optional string? target
+		// for use when re-creating the AttributeList
+		public ReadOnlyCollection<(AttributeSyntax, string?)> NonAvailabilityAttributes;
 
 		public ReadOnlyCollection<AttributeSyntax> IntroducedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
@@ -25,7 +27,7 @@ namespace mellite {
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<AttributeSyntax> existingAvailabilityAttributes, List<AttributeSyntax> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		public HarvestedMemberInfo (List<AttributeSyntax> existingAvailabilityAttributes, List<(AttributeSyntax, string?)> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
 		{
 			ExistingAvailabilityAttributes = existingAvailabilityAttributes.AsReadOnly ();
 			NonAvailabilityAttributes = nonAvailabilityAttributes.AsReadOnly ();
@@ -46,7 +48,7 @@ namespace mellite {
 		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent)
 		{
 			var existingAvailabilityAttributes = new List<AttributeSyntax> ();
-			var nonAvailabilityAttributes = new List<AttributeSyntax> ();
+			var nonAvailabilityAttributes = new List<(AttributeSyntax, string?)> ();
 
 			var introducedAttributesToProcess = new List<AttributeSyntax> ();
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
@@ -97,7 +99,7 @@ namespace mellite {
 						break;
 					}
 					default:
-						nonAvailabilityAttributes.Add (attribute);
+						nonAvailabilityAttributes.Add ((attribute, attributeList.Target?.ToString ()));
 						break;
 					}
 				}
