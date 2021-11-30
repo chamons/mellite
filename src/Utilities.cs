@@ -21,21 +21,28 @@ namespace mellite.Utilities {
 			return SyntaxFactory.AttributeList (netAttributeElements);
 		}
 
-		public static AttributeListSyntax ToAttributeList (this (AttributeSyntax, string?) createdAttributeInfo)
+		public static AttributeListSyntax ToAttributeList (this HarvestedAvailabilityInfo createdAttributeInfo)
 		{
-			if (createdAttributeInfo.Item2 == null) {
-				return createdAttributeInfo.Item1.ToAttributeList ();
-			} else {
-				AttributeSyntax createdAttribute = createdAttributeInfo.Item1;
-				// Add a ' ' between Attribute and attribute '(' if there is a '('
-				if (createdAttribute.ArgumentList?.Arguments.Count > 0) {
-					createdAttribute = createdAttribute.WithName (createdAttribute.Name.WithTrailingTrivia (TriviaConstants.Space));
-				}
-				var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
-				// Remove the trailing : from the parsed target, as AttributeTargetSpecifier will re-add it
-				var target = SyntaxFactory.AttributeTargetSpecifier (SyntaxFactory.Identifier (createdAttributeInfo.Item2.TrimEnd (':'))).WithTrailingTrivia (TriviaConstants.Space);
-				return SyntaxFactory.AttributeList (target, netAttributeElements);
+			AttributeSyntax createdAttribute = createdAttributeInfo.Attribute;
+			// Add a ' ' between Attribute and attribute '(' if there is a '('
+			if (createdAttribute.ArgumentList?.Arguments.Count > 0) {
+				createdAttribute = createdAttribute.WithName (createdAttribute.Name.WithTrailingTrivia (SyntaxFactory.ParseLeadingTrivia (" ")));
 			}
+			var netAttributeElements = SyntaxFactory.SeparatedList (new List<AttributeSyntax> () { createdAttribute }, Enumerable.Repeat (SyntaxFactory.Token (SyntaxKind.CommaToken), 0));
+
+			AttributeListSyntax list;
+			if (createdAttributeInfo.Target == null) {
+				list = SyntaxFactory.AttributeList (netAttributeElements);
+			} else {
+				// Remove the trailing : from the parsed target, as AttributeTargetSpecifier will re-add it
+				var target = SyntaxFactory.AttributeTargetSpecifier (SyntaxFactory.Identifier (createdAttributeInfo.Target.TrimEnd (':'))).WithTrailingTrivia (TriviaConstants.Space);
+				list = SyntaxFactory.AttributeList (target, netAttributeElements);
+			}
+
+			if (!String.IsNullOrEmpty (createdAttributeInfo.Comment)) {
+				list = list.WithTrailingTrivia (list.GetTrailingTrivia ().AddRange (TriviaConstants.Space).AddRange (SyntaxFactory.TriviaList (SyntaxFactory.Comment (createdAttributeInfo.Comment))));
+			}
+			return list;
 		}
 	}
 

@@ -4,16 +4,35 @@ using System.Collections.ObjectModel;
 using System.Linq;
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using mellite.Utilities;
 
 namespace mellite {
+	// In general 
+	public class HarvestedAvailabilityInfo {
+		public readonly AttributeSyntax Attribute;
+		public readonly string? Target;
+		public readonly string? Comment;
+
+		public HarvestedAvailabilityInfo (AttributeSyntax attribute, string? target, string? comment)
+		{
+			Attribute = attribute;
+			Target = target;
+			Comment = comment;
+		}
+
+		public static HarvestedAvailabilityInfo From (AttributeSyntax attribute, AttributeListSyntax list)
+		{
+			string? comment = list.GetTrailingTrivia ().FirstOrDefault (x => x.Kind () == SyntaxKind.SingleLineCommentTrivia).ToString ();
+			return new HarvestedAvailabilityInfo (attribute, list.Target?.ToString (), comment);
+		}
+	}
+
 	public class HarvestedMemberInfo {
-		public ReadOnlyCollection<AttributeSyntax> ExistingAvailabilityAttributes;
-		// We support attributes with target: syntax only on non-availability attributes, so store an optional string? target
-		// for use when re-creating the AttributeList
-		public ReadOnlyCollection<(AttributeSyntax, string?)> NonAvailabilityAttributes;
+		public ReadOnlyCollection<HarvestedAvailabilityInfo> ExistingAvailabilityAttributes;
+		public ReadOnlyCollection<HarvestedAvailabilityInfo> NonAvailabilityAttributes;
 
 		public ReadOnlyCollection<AttributeSyntax> IntroducedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
@@ -27,7 +46,7 @@ namespace mellite {
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<AttributeSyntax> existingAvailabilityAttributes, List<(AttributeSyntax, string?)> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		public HarvestedMemberInfo (List<HarvestedAvailabilityInfo> existingAvailabilityAttributes, List<HarvestedAvailabilityInfo> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
 		{
 			ExistingAvailabilityAttributes = existingAvailabilityAttributes.AsReadOnly ();
 			NonAvailabilityAttributes = nonAvailabilityAttributes.AsReadOnly ();
@@ -47,8 +66,8 @@ namespace mellite {
 	public static class Harvester {
 		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent)
 		{
-			var existingAvailabilityAttributes = new List<AttributeSyntax> ();
-			var nonAvailabilityAttributes = new List<(AttributeSyntax, string?)> ();
+			var existingAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
+			var nonAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
 
 			var introducedAttributesToProcess = new List<AttributeSyntax> ();
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
@@ -71,12 +90,12 @@ namespace mellite {
 					case "MacCatalyst":
 					case "Introduced": {
 						AddIfSupportedPlatform (attribute, introducedAttributesToProcess);
-						existingAvailabilityAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 					case "Deprecated": {
 						AddIfSupportedPlatform (attribute, deprecatedAttributesToProcess);
-						existingAvailabilityAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 					case "NoMac":
@@ -85,21 +104,21 @@ namespace mellite {
 					case "NoMacCatalyst":
 					case "Unavailable": {
 						AddIfSupportedPlatform (attribute, unavailableAttributesToProcess);
-						existingAvailabilityAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 					case "Obsoleted": {
 						AddIfSupportedPlatform (attribute, obsoleteAttributesToProcess);
-						existingAvailabilityAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 					case "NoWatch":
 					case "Watch": {
-						existingAvailabilityAttributes.Add (attribute);
+						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 					default:
-						nonAvailabilityAttributes.Add ((attribute, attributeList.Target?.ToString ()));
+						nonAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 				}
