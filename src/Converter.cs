@@ -272,7 +272,7 @@ namespace mellite {
 				var lastArg = node.ArgumentList!.Arguments.Last ().ToString ();
 				// Skip 10 - sizeof("message: \"") and last "
 				if (lastArg.StartsWith ("message:")) {
-					message = lastArg [10..^1];
+					message = " " + lastArg [10..^1];
 				}
 			}
 

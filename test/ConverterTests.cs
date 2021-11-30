@@ -776,11 +776,11 @@ namespace UIKit {
 		[UnsupportedOSPlatform (""tvos13.0"")]
 		[UnsupportedOSPlatform (""ios13.0"")]
 #if MONOMAC
-		[Obsolete (""Starting with macos10.15Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+		[Obsolete (""Starting with macos10.15 Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
-		[Obsolete (""Starting with tvos13.0Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+		[Obsolete (""Starting with tvos13.0 Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-		[Obsolete (""Starting with ios13.0Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+		[Obsolete (""Starting with ios13.0 Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif
 #else
 		[Deprecated (PlatformName.MacOSX, 10, 15, message: ""Use the 'ShowGlyphs' overload that takes 'nint glyphCount' instead."")]
