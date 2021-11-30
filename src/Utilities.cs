@@ -58,6 +58,19 @@ namespace mellite.Utilities {
 			}
 			return -1;
 		}
+
+		public static int LastIndexOf<TSource> (this IEnumerable<TSource> source, Func<TSource, bool> predicate)
+		{
+			var found = -1;
+			var index = 0;
+			foreach (var item in source) {
+				if (predicate.Invoke (item)) {
+					found = index;
+				}
+				index++;
+			}
+			return found;
+		}
 	}
 
 	public static class StringExtensions {

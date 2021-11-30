@@ -205,14 +205,14 @@ namespace mellite {
 			var triviaToProcess = node.GetLeadingTrivia ();
 
 			// If we come across any non-whitespace trivia, hoist it and all elements before it to nonWhitespaceTrivia
-			int lastNonWhiteSpaceTrivia = triviaToProcess.IndexOf (x => !String.IsNullOrWhiteSpace (x.ToString ()));
+			int lastNonWhiteSpaceTrivia = triviaToProcess.LastIndexOf (x => !String.IsNullOrWhiteSpace (x.ToString ()));
 			if (lastNonWhiteSpaceTrivia != -1) {
 				nonWhitespaceTrivia = nonWhitespaceTrivia.AddRange (triviaToProcess.Take (lastNonWhiteSpaceTrivia + 1));
 				triviaToProcess = new SyntaxTriviaList (triviaToProcess.Skip (lastNonWhiteSpaceTrivia + 1));
 			}
 
 			foreach (var trivia in triviaToProcess.Reverse ()) {
-				if (trivia.ToFullString () == "\r\n" || trivia.ToFullString () == "\n") {
+				if (trivia.Kind () == SyntaxKind.EndOfLineTrivia) {
 					foundSplit = true;
 				}
 
