@@ -619,6 +619,7 @@ namespace binding
 ", @"namespace UIKit {
 
 	public static partial class UIGuidedAccessRestriction {
+		[Verify] // Nested Conditionals are not always correctly processed
 #if !COREBUILD
 #if NET
 		[SupportedOSPlatform (""ios7.0"")]
@@ -763,6 +764,7 @@ namespace AppKit {
 namespace UIKit {
 #endif
 		partial class NSLayoutManager {
+		[Verify] // Nested Conditionals are not always correctly processed
 #if !XAMCORE_4_0 && !__MACCATALYST__
 #if MONOMAC
 		[Deprecated (PlatformName.MacOSX, 10, 15, message: ""Use the overload that takes 'nint glyphCount' instead."")]

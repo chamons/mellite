@@ -222,7 +222,16 @@ namespace mellite {
 					rest = rest.Add (trivia);
 				}
 			}
-			return (new SyntaxTriviaList (nonWhitespaceTrivia), new SyntaxTriviaList (newlines.Reverse ()), new SyntaxTriviaList (rest.Reverse ()));
+			newlines = new SyntaxTriviaList (newlines.Reverse ());
+			rest = new SyntaxTriviaList (rest.Reverse ());
+
+			// Nested blocks that aren't negative are really hard to parse, as roslyn literally gives us nothing useful.
+			// To do this optimally I'd have to spin up yet another roslyn to parse it, and then marry that together somehow
+			// So just detect and add a [Verify] attribute that will break the build
+			if (nonWhitespaceTrivia.ToFullString ().Contains ("#if ")) {
+				nonWhitespaceTrivia = SyntaxFactory.TriviaList (rest.Add (SyntaxFactory.DisabledText ("[Verify] // Nested Conditionals are not always correctly processed"))).AddRange (TriviaConstants.Newline).AddRange (nonWhitespaceTrivia);
+			}
+			return (new SyntaxTriviaList (nonWhitespaceTrivia), newlines, rest);
 		}
 	}
 
