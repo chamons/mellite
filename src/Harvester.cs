@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -225,14 +226,27 @@ namespace mellite {
 			newlines = new SyntaxTriviaList (newlines.Reverse ());
 			rest = new SyntaxTriviaList (rest.Reverse ());
 
-			// Nested blocks that aren't negative are really hard to parse, as roslyn literally gives us nothing useful.
-			// To do this optimally I'd have to spin up yet another roslyn to parse it, and then marry that together somehow
-			// So just detect and add a [Verify] attribute that will break the build
-			if (nonWhitespaceTrivia.ToFullString ().Contains ("#if ")) {
-				nonWhitespaceTrivia = SyntaxFactory.TriviaList (rest.Add (SyntaxFactory.DisabledText ("[Verify] // Nested Conditionals are not always correctly processed"))).AddRange (TriviaConstants.Newline).AddRange (nonWhitespaceTrivia);
-			}
+			ApplyVerifyForNonNegativeConditionalBlocks (ref nonWhitespaceTrivia, rest);
+
 			return (new SyntaxTriviaList (nonWhitespaceTrivia), newlines, rest);
 		}
-	}
 
+		// Nested blocks that aren't negative are really hard to parse, as roslyn literally gives us nothing useful.
+		// To do this optimally I'd have to spin up yet another roslyn to parse it, and then marry that together somehow
+		// So just detect and add a [Verify] attribute that will break the build
+		static void ApplyVerifyForNonNegativeConditionalBlocks (ref SyntaxTriviaList nonWhitespaceTrivia, SyntaxTriviaList rest)
+		{
+			// Start of string, #if, space, some number of (word chars, whitespace, |, &), end of string
+			const string ConditionalTrivia = "^#if [\\w\\s|&]+$";
+
+			// ToList here to fully search before we modify the list
+			foreach (var nonNegativeCondition in nonWhitespaceTrivia.Where (t => Regex.IsMatch (t.ToFullString (), ConditionalTrivia)).ToList ()) {
+				if (!nonNegativeCondition.ToFullString ().Contains ("XAMCORE_4_0")) {
+					int insertionPoint = nonWhitespaceTrivia.IndexOf (n => nonNegativeCondition.ToFullString () == n.ToFullString ());
+					var verify = SyntaxFactory.DisabledText ($"{rest.ToFullString ()}[Verify] // Nested Conditionals are not always correctly processed\n");
+					nonWhitespaceTrivia = nonWhitespaceTrivia.Insert (insertionPoint, verify);
+				}
+			}
+		}
+	}
 }

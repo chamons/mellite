@@ -619,7 +619,6 @@ namespace binding
 ", @"namespace UIKit {
 
 	public static partial class UIGuidedAccessRestriction {
-		[Verify] // Nested Conditionals are not always correctly processed
 #if !COREBUILD
 #if NET
 		[SupportedOSPlatform (""ios7.0"")]
@@ -764,8 +763,8 @@ namespace AppKit {
 namespace UIKit {
 #endif
 		partial class NSLayoutManager {
-		[Verify] // Nested Conditionals are not always correctly processed
 #if !XAMCORE_4_0 && !__MACCATALYST__
+		[Verify] // Nested Conditionals are not always correctly processed
 #if MONOMAC
 		[Deprecated (PlatformName.MacOSX, 10, 15, message: ""Use the overload that takes 'nint glyphCount' instead."")]
 		[Deprecated (PlatformName.iOS, 13, 0, message: ""Use the overload that takes 'nint glyphCount' instead."")]
@@ -795,6 +794,33 @@ namespace UIKit {
         }
 #endif
     }
+}
+");
+
+			// #if !WATCH shouldn't trigger [Verify] as it has a ! prefix
+			TestConversionToSame (@"namespace UIKit {
+	public partial class UIApplication : UIResponder
+	{
+#if !WATCH
+		[DllImport (/*Constants.UIKitLibrary*/ ""__Internal"")]
+		extern static int UIApplicationMain (int argc, /* char[]* */ string []? argv, /* NSString* */ IntPtr principalClassName, /* NSString* */ IntPtr delegateClassName);
+#endif
+	}
+}
+");
+
+			// Hard code #if XAMCORE_4_0 as not worth warning about
+			TestConversionToSame (@"namespace UIKit {
+	public partial class UIApplication : UIResponder
+	{
+#if XAMCORE_4_0
+		[DllImport (/*Constants.UIKitLibrary*/ ""__Internal"")]
+		extern static int A (int argc, /* char[]* */ string []? argv, /* NSString* */ IntPtr principalClassName, /* NSString* */ IntPtr delegateClassName);
+#endif
+
+		[DllImport (/*Constants.UIKitLibrary*/ ""__Internal"")]
+		extern static int B (int argc, /* char[]* */ string []? argv, /* NSString* */ IntPtr principalClassName, /* NSString* */ IntPtr delegateClassName);
+	}
 }
 ");
 		}
