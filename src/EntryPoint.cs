@@ -18,6 +18,7 @@ namespace mellite {
 			string? path = null;
 			LocatorOptions locatorOptions = new LocatorOptions ();
 			ProcessSteps steps = ProcessSteps.ConvertXamarinAttributes;
+			List<string> defines = new List<string> ();
 
 			OptionSet os = new OptionSet ()
 			{
@@ -26,7 +27,7 @@ namespace mellite {
 				{ "i|ignore=", "Directories (relative to root) not to be considered for processing", i => locatorOptions.Ignore.Add (i) },
 				{ "strip-attributes", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
 				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks", i => steps = ProcessSteps.StripConditionBlocks },
-
+				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
 			};
 
 			try {
@@ -57,7 +58,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Processor.ProcessFile (file, steps);
+					Processor.ProcessFile (file, steps, defines);
 				}
 				break;
 			}

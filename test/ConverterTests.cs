@@ -1,5 +1,5 @@
 using System;
-
+using System.Collections.Generic;
 using Xunit;
 
 namespace mellite.tests {
@@ -851,6 +851,36 @@ namespace UIKit {
 	}
 }
 ");
+		}
+
+		[Fact]
+		public void Defines ()
+		{
+			TestUtilities.TestProcess (@"namespace UIKit {
+	public partial class UIVibrancyEffect {
+#if HAS_NOTIFICATIONCENTER
+		[Deprecated (PlatformName.iOS, 10,0, message: ""Use 'CreatePrimaryVibrancyEffectForNotificationCenter' instead."")]
+		static public UIVibrancyEffect CreateForNotificationCenter ()
+#endif
+	}
+}
+", ProcessSteps.ConvertXamarinAttributes, @"namespace UIKit {
+	public partial class UIVibrancyEffect {
+		[Verify] // Nested Conditionals are not always correctly processed
+#if HAS_NOTIFICATIONCENTER
+#if NET
+		[UnsupportedOSPlatform (""ios10.0"")]
+#if IOS
+		[Obsolete (""Starting with ios10.0 Use 'CreatePrimaryVibrancyEffectForNotificationCenter' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+		[Deprecated (PlatformName.iOS, 10,0, message: ""Use 'CreatePrimaryVibrancyEffectForNotificationCenter' instead."")]
+#endif
+		static public UIVibrancyEffect CreateForNotificationCenter ()
+#endif
+	}
+}
+", defines: new List<string> () { "HAS_NOTIFICATIONCENTER" });
 		}
 	}
 }

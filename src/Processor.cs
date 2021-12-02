@@ -17,17 +17,18 @@ namespace mellite {
 	};
 
 	public static class Processor {
-		public static void ProcessFile (string path, ProcessSteps steps)
+		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines)
 		{
-			var text = ProcessText (File.ReadAllText (path), steps);
+			var text = ProcessText (File.ReadAllText (path), steps, defines);
 			File.WriteAllText (path, text);
 		}
 
-		public static string ProcessText (string text, ProcessSteps steps)
+		public static string ProcessText (string text, ProcessSteps steps, List<string> defines)
 		{
 			switch (steps) {
 			case ProcessSteps.ConvertXamarinAttributes:
-				SyntaxTree tree = CSharpSyntaxTree.ParseText (text);
+				CSharpParseOptions options = new CSharpParseOptions (preprocessorSymbols: defines);
+				SyntaxTree tree = CSharpSyntaxTree.ParseText (text, options);
 
 				CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
 
