@@ -824,5 +824,33 @@ namespace UIKit {
 }
 ");
 		}
+
+		[Fact]
+		public void ConvertEvents ()
+		{
+			TestConversion (@"namespace UIKit {
+	public static partial class UIGuidedAccessRestriction {
+		[iOS (9,0)]
+		public event EventHandler PrimaryActionTriggered {
+			add { }
+			remove { }
+		}
+	}
+}
+", @"namespace UIKit {
+	public static partial class UIGuidedAccessRestriction {
+#if NET
+		[SupportedOSPlatform (""ios9.0"")]
+#else
+		[iOS (9,0)]
+#endif
+		public event EventHandler PrimaryActionTriggered {
+			add { }
+			remove { }
+		}
+	}
+}
+");
+		}
 	}
 }
