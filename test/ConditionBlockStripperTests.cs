@@ -180,6 +180,20 @@ namespace ARKit {
 			protected override bool TryComputeLength (out long length)
 ");
 		}
+
+		[Fact]
+		public void DoNotStripObsolete ()
+		{
+			TestStripToSame (@"namespace AVFoundation {
+#if NET
+            [Obsolete (""Starting with ios13.0 use 'UIVibrancyEffect.CreateWidgetEffectForNotificationCenter' instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+			static public UIVibrancyEffect CreateSecondaryVibrancyEffectForNotificationCenter ()
+			{
+			}
+}
+");
+		}
 	}
 }
 
