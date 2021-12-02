@@ -315,7 +315,7 @@ namespace mellite {
 					if (!line.Contains ("XAMCORE_4_0")) {
 						// Find the last line and count the number of leading tabs, and prepend that to roughly get right tabbing
 						// TODO - Super non-performant...
-						var whitespace = File.ToString ().SplitLines ().Last ().LeadingWhitespace ();
+						var whitespace = (File.ToString ().SplitLines ().LastOrDefault () ?? "").LeadingWhitespace ();
 						File.AppendLine ($"{whitespace}[Verify] // Nested Conditionals are not always correctly processed");
 					}
 				}
