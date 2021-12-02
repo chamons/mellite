@@ -43,11 +43,6 @@ namespace mellite {
 				return;
 			}
 
-			if (!Directory.Exists (path)) {
-				Console.Error.WriteLine ($"Could not find directory: {path}");
-				return;
-			}
-
 			List<string> files = Locator.LocateFiles (path, locatorOptions);
 
 			switch (requestedAction) {

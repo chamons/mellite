@@ -17,7 +17,7 @@ test::
 
 CONVERT_CMD=dotnet run --project src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/
 convert::
+	$(Q) $(CONVERT_CMD) --strip-verify
 	$(Q) $(CONVERT_CMD) --strip-attributes
 	$(Q) $(CONVERT_CMD) --strip-blocks
-	$(Q) $(CONVERT_CMD) --strip-verify
 	$(Q) $(CONVERT_CMD) 

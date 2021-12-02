@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,9 +15,14 @@ namespace mellite {
 		{
 			var ignore = options.Ignore.Select (x => Path.Combine (root, x)).ToList ();
 
-			var allFiles = Directory.EnumerateFiles (root, "*.cs", new EnumerationOptions () { RecurseSubdirectories = true });
-
-			return allFiles.Where (file => !ignore.Any (i => file.StartsWith (i))).ToList ();
+			if (Directory.Exists (root)) {
+				var allFiles = Directory.EnumerateFiles (root, "*.cs", new EnumerationOptions () { RecurseSubdirectories = true });
+				return allFiles.Where (file => !ignore.Any (i => file.StartsWith (i))).ToList ();
+			} else if (File.Exists (root)) {
+				return new List<string> () { root };
+			} else {
+				throw new InvalidOperationException ($"{root} is not found as a directory or a file.");
+			}
 		}
 	}
 }
