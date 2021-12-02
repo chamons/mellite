@@ -226,28 +226,7 @@ namespace mellite {
 			newlines = new SyntaxTriviaList (newlines.Reverse ());
 			rest = new SyntaxTriviaList (rest.Reverse ());
 
-			ApplyVerifyForNonNegativeConditionalBlocks (ref nonWhitespaceTrivia, rest);
-
 			return (new SyntaxTriviaList (nonWhitespaceTrivia), newlines, rest);
-		}
-
-		// Nested blocks that aren't negative are really hard to parse, as roslyn literally gives us nothing useful.
-		// To do this optimally I'd have to spin up yet another roslyn to parse it, and then marry that together somehow
-		// So just detect and add a [Verify] attribute that will break the build
-		static void ApplyVerifyForNonNegativeConditionalBlocks (ref SyntaxTriviaList nonWhitespaceTrivia, SyntaxTriviaList rest)
-		{
-			// Start of string, #if, space, some number of (word chars, whitespace, |, &), end of string
-			const string ConditionalTrivia = "^#if [\\w\\s|&]+$";
-
-			// ToList here to fully search before we modify the list
-			foreach (var nonNegativeCondition in nonWhitespaceTrivia.Where (t => Regex.IsMatch (t.ToFullString (), ConditionalTrivia)).ToList ()) {
-				// XAMCORE_4_0 is super common, so don't add [Verify] to it
-				if (!nonNegativeCondition.ToFullString ().Contains ("XAMCORE_4_0")) {
-					int insertionPoint = nonWhitespaceTrivia.IndexOf (n => nonNegativeCondition.ToFullString () == n.ToFullString ());
-					var verify = SyntaxFactory.DisabledText ($"{rest.ToFullString ()}[Verify] // Nested Conditionals are not always correctly processed\n");
-					nonWhitespaceTrivia = nonWhitespaceTrivia.Insert (insertionPoint, verify);
-				}
-			}
 		}
 	}
 }

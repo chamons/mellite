@@ -27,6 +27,7 @@ namespace mellite {
 				{ "i|ignore=", "Directories (relative to root) not to be considered for processing", i => locatorOptions.Ignore.Add (i) },
 				{ "strip-attributes", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
 				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks", i => steps = ProcessSteps.StripConditionBlocks },
+				{ "strip-verify", "Instead of converting attributes, 'strip' blocks looking for required [Verify] when the tool can be confused.", i => steps = ProcessSteps.StripVerify },
 				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
 			};
 

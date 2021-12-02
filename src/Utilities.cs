@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using mellite;
+using System.Text;
 
 namespace mellite.Utilities {
 	public static class RoslynExtensions {
@@ -82,6 +83,19 @@ namespace mellite.Utilities {
 					yield return line;
 				}
 			}
+		}
+
+		internal static string LeadingWhitespace (this string text)
+		{
+			StringBuilder whitespace = new StringBuilder ();
+			foreach (char c in text) {
+				if (!Char.IsWhiteSpace (c)) {
+					break;
+				}
+				whitespace.Append (c);
+			}
+
+			return whitespace.ToString ();
 		}
 	}
 }

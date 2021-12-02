@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using mellite.Utilities;
+using System.Text.RegularExpressions;
 
 namespace mellite {
 	public static class StripperHelpers {
@@ -290,6 +291,39 @@ namespace mellite {
 		}
 
 
+	}
+
+	// Ok, this really isn't technically "Stripping", but it fits the pattern of line by line parsing
+	class VerifyStripper {
+
+		StringBuilder File = new StringBuilder ();
+
+		public void Reset ()
+		{
+			File.Clear ();
+		}
+
+		// Start of string, #if, space, some number of (word chars, whitespace, |, &), end of string
+		const string ConditionalTrivia = "^#if [\\w\\s|&]+$";
+
+		public string StripText (string text)
+		{
+			Reset ();
+
+			foreach (var line in text.SplitLines ()) {
+				if (Regex.IsMatch (line, ConditionalTrivia)) {
+					if (!line.Contains ("XAMCORE_4_0")) {
+						// Find the last line and count the number of leading tabs, and prepend that to roughly get right tabbing
+						// TODO - Super non-performant...
+						var whitespace = File.ToString ().SplitLines ().Last ().LeadingWhitespace ();
+						File.AppendLine ($"{whitespace}[Verify] // Nested Conditionals are not always correctly processed");
+					}
+				}
+				File.AppendLine (line);
+			}
+
+			return File.ToString ();
+		}
 	}
 
 	// This "rewriter" verified that all contents of a #if or #else block are attributes and are safe to remove

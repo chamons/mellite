@@ -14,6 +14,7 @@ namespace mellite {
 		ConvertXamarinAttributes,
 		StripExistingNET6Attributes,
 		StripConditionBlocks,
+		StripVerify
 	};
 
 	public static class Processor {
@@ -38,6 +39,8 @@ namespace mellite {
 				return (new AttributeStripper ()).StripText (text);
 			case ProcessSteps.StripConditionBlocks:
 				return (new ConditionBlockStripper ()).StripText (text);
+			case ProcessSteps.StripVerify:
+				return (new VerifyStripper ()).StripText (text);
 			default:
 				return text;
 			}
