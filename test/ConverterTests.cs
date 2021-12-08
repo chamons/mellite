@@ -771,7 +771,6 @@ namespace binding
 }
 ", ProcessSteps.ConvertXamarinAttributes, @"namespace UIKit {
 	public partial class UIVibrancyEffect {
-		[Verify] // Nested Conditionals are not always correctly processed
 #if HAS_NOTIFICATIONCENTER
 #if NET
 		[UnsupportedOSPlatform (""ios10.0"")]
