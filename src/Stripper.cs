@@ -13,6 +13,17 @@ using System.Text.RegularExpressions;
 
 namespace mellite {
 	public static class StripperHelpers {
+		// Start of string, #if, space, some number of (word chars, whitespace, |, &), end of string
+		public const string PositiveConditionalTrivia = "^#if [\\w\\s|&]+$";
+
+		// Start of string, #if, space, some number of (!, word chars, whitespace, |, &), end of string
+		public const string ConditionalTrivia = "^#if [!\\w\\s|&]+$";
+
+		public static bool HasIgnorableDefines (string line)
+		{
+			return line.Contains ("XAMCORE_4_0");
+		}
+
 		public static string TrimLine (string line)
 		{
 			int commentIndex = line.IndexOf ("//");
@@ -26,18 +37,30 @@ namespace mellite {
 			return line.Trim ();
 		}
 
-		public static bool ChunkContainsOnlyAttributes (string chunk)
+		static CompilationUnitSyntax PrepareForVisitor (string chunk, bool stripContainingLines)
 		{
 			// Skip the #if and #else or #end for analysis by roslyn
-			string section = String.Join ('\n', chunk.SplitLines ().Skip (1).SkipLast (1));
+			string section = stripContainingLines ? String.Join ('\n', chunk.SplitLines ().Skip (1).SkipLast (1)) : chunk;
 
 			SyntaxTree tree = CSharpSyntaxTree.ParseText (section);
 
-			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
+			return tree.GetCompilationUnitRoot ();
+		}
 
-			var visitor = new TriviaContentsVisitor ();
+		public static bool ChunkContainsOnlyAttributes (string chunk, bool stripContainingLines = true)
+		{
+			var root = PrepareForVisitor (chunk, stripContainingLines);
+			var visitor = new OnlyContainsTriviaVisitor ();
 			root!.Accept (visitor);
 			return visitor.EverythingIsAvailabilityAttribute;
+		}
+
+		public static bool ChunkContainsAnyAvailabilityAttributes (string chunk, bool stripContainingLines = true)
+		{
+			var root = PrepareForVisitor (chunk, stripContainingLines);
+			var visitor = new HasAnyAvailabilityVisitor ();
+			root!.Accept (visitor);
+			return visitor.HasAnyAvailability;
 		}
 	}
 
@@ -303,15 +326,12 @@ namespace mellite {
 			File.Clear ();
 		}
 
-		// Start of string, #if, space, some number of (word chars, whitespace, |, &), end of string
-		const string ConditionalTrivia = "^#if [\\w\\s|&]+$";
-
 		public string StripText (string text)
 		{
 			Reset ();
 
 			foreach (var line in text.SplitLines ()) {
-				if (Regex.IsMatch (line, ConditionalTrivia)) {
+				if (Regex.IsMatch (line, StripperHelpers.PositiveConditionalTrivia)) {
 					if (!line.Contains ("XAMCORE_4_0")) {
 						// Find the last line and count the number of leading tabs, and prepend that to roughly get right tabbing
 						// TODO - Super non-performant...
@@ -328,10 +348,10 @@ namespace mellite {
 
 	// This "rewriter" verified that all contents of a #if or #else block are attributes and are safe to remove
 	// It in theory could be a visitor, but I had trouble making that work.
-	class TriviaContentsVisitor : CSharpSyntaxRewriter {
+	class OnlyContainsTriviaVisitor : CSharpSyntaxRewriter {
 		public bool EverythingIsAvailabilityAttribute = true;
 
-		public TriviaContentsVisitor ()
+		public OnlyContainsTriviaVisitor ()
 		{
 		}
 
@@ -388,6 +408,52 @@ namespace mellite {
 				break;
 			}
 			return node;
+		}
+	}
+
+	class HasAnyAvailabilityVisitor : CSharpSyntaxRewriter {
+		public bool HasAnyAvailability = false;
+
+		public HasAnyAvailabilityVisitor ()
+		{
+		}
+
+		public override SyntaxNode? VisitAttributeArgumentList (AttributeArgumentListSyntax node)
+		{
+			return base.VisitAttributeArgumentList (node);
+		}
+
+		public override SyntaxNode? Visit (SyntaxNode? node)
+		{
+			switch (node?.GetType ().ToString ()) {
+			case "Microsoft.CodeAnalysis.CSharp.Syntax.AttributeListSyntax":
+				foreach (var attribute in ((AttributeListSyntax) node).Attributes) {
+					switch (attribute.Name.ToString ()) {
+					case "Mac":
+					case "iOS":
+					case "TV":
+					case "MacCatalyst":
+					case "Introduced":
+					case "Deprecated":
+					case "NoMac":
+					case "NoiOS":
+					case "NoTV":
+					case "NoMacCatalyst":
+					case "Unavailable":
+					case "Obsoleted":
+					case "NoWatch":
+					case "Watch":
+					case "UnsupportedOSPlatform":
+					case "SupportedOSPlatform":
+					case "Obsolete": // Obsolete can have DiagnosticId/UrlFormat which are NET6 specific :(
+						HasAnyAvailability = true;
+						break;
+					}
+				}
+				return node;
+			default:
+				return base.Visit (node);
+			}
 		}
 	}
 }

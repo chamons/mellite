@@ -14,7 +14,8 @@ namespace mellite {
 		ConvertXamarinAttributes,
 		StripExistingNET6Attributes,
 		StripConditionBlocks,
-		StripVerify
+		StripVerify,
+		ListDefinesDetected,
 	};
 
 	public static class Processor {
@@ -41,6 +42,11 @@ namespace mellite {
 				return (new ConditionBlockStripper ()).StripText (text);
 			case ProcessSteps.StripVerify:
 				return (new VerifyStripper ()).StripText (text);
+			case ProcessSteps.ListDefinesDetected: {
+				var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
+				Console.WriteLine (detectedDefines != null ? $"Found Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
+				return text;
+			}
 			default:
 				return text;
 			}

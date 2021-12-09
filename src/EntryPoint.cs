@@ -28,6 +28,7 @@ namespace mellite {
 				{ "strip-attributes", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
 				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks", i => steps = ProcessSteps.StripConditionBlocks },
 				{ "strip-verify", "Instead of converting attributes, 'strip' blocks looking for required [Verify] when the tool can be confused.", i => steps = ProcessSteps.StripVerify },
+				{ "detect-defines", "Detect the full set of defines needed to process all availability attributes in a file", i => steps = ProcessSteps.ListDefinesDetected },
 				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
 			};
 
