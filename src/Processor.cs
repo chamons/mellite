@@ -16,16 +16,24 @@ namespace mellite {
 		StripConditionBlocks,
 		StripVerify,
 		ListDefinesDetected,
+		ListDefineUnresolvableFiles,
 	};
 
 	public static class Processor {
 		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines)
 		{
-			var text = ProcessText (File.ReadAllText (path), steps, defines);
-			File.WriteAllText (path, text);
+			try {
+				var text = ProcessText (File.ReadAllText (path), steps, defines, path);
+				if (text != null) {
+					File.WriteAllText (path, text);
+				}
+			} catch (Exception e) {
+				Console.Error.WriteLine ($"Fatal Error while processing {path}: {e}");
+				throw;
+			}
 		}
 
-		public static string ProcessText (string text, ProcessSteps steps, List<string> defines)
+		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? path = null)
 		{
 			switch (steps) {
 			case ProcessSteps.ConvertXamarinAttributes:
@@ -45,10 +53,21 @@ namespace mellite {
 			case ProcessSteps.ListDefinesDetected: {
 				var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
 				Console.WriteLine (detectedDefines != null ? $"Found Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
-				return text;
+				var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text);
+				Console.WriteLine ();
+				Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
+				return null;
+			}
+			case ProcessSteps.ListDefineUnresolvableFiles: {
+				if ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text) == null) {
+					Console.WriteLine (path);
+					var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
+					Console.WriteLine (detectedDefines != null ? $"Found Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
+				}
+				return null;
 			}
 			default:
-				return text;
+				return null;
 			}
 
 		}

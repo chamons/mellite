@@ -29,6 +29,7 @@ namespace mellite {
 				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks", i => steps = ProcessSteps.StripConditionBlocks },
 				{ "strip-verify", "Instead of converting attributes, 'strip' blocks looking for required [Verify] when the tool can be confused.", i => steps = ProcessSteps.StripVerify },
 				{ "detect-defines", "Detect the full set of defines needed to process all availability attributes in a file", i => steps = ProcessSteps.ListDefinesDetected },
+				{ "detect-unresolvable", "Detect the files that can not be resolved due to complex or conflicting defines", i => steps = ProcessSteps.ListDefineUnresolvableFiles },
 				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
 			};
 
