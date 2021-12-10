@@ -6,12 +6,13 @@ using Xunit;
 
 namespace mellite.tests {
 	public class DefineParserTests {
-		void ParseAndExpect (string text, List<string> defines, bool expectConflict = false)
+		void ParseAndExpect (string text, List<string> expectedDefines, List<string>? expectedUniqueDefines)
 		{
 			var found = (new DefineParser ()).ParseAllDefines (text);
-			Assert.Equal (defines, found);
+			Assert.Equal (expectedDefines, found);
+
 			var uniqueDefines = ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text));
-			Assert.Equal (expectConflict, uniqueDefines == null);
+			Assert.Equal (expectedUniqueDefines, uniqueDefines);
 		}
 
 		[Fact]
@@ -22,12 +23,13 @@ namespace mellite.tests {
 		[return: MarshalAs (UnmanagedType.I1)] // This is a comment
 		public static extern bool SupportsBidirectionalStreaming ();
 	}
-", new List<string> ());
+", new List<string> (), new List<string> ());
 		}
 
 		[Fact]
 		public void MultipleDefinesInFile ()
 		{
+			// MONOMAC has no availability inside here
 			ParseAndExpect (@"namespace Accessibility {
 	public static partial class AXHearingUtilities {
 #if MONOMAC
@@ -39,7 +41,7 @@ namespace mellite.tests {
 		public static extern bool SupportsBidirectionalStreaming ();
 #endif
 	}
-", new List<string> () { "IOS" });
+", new List<string> () { "IOS" }, new List<string> () { "IOS" });
 
 			ParseAndExpect (@"namespace Accessibility {
 	public static partial class AXHearingUtilities {
@@ -52,12 +54,13 @@ namespace mellite.tests {
 		public static extern bool SupportsBidirectionalStreaming ();
 #endif
 	}
-", new List<string> () { "MONOMAC", "IOS" });
+", new List<string> () { "MONOMAC", "IOS" }, new List<string> () { "MONOMAC", "IOS" });
 		}
 
 		[Fact]
 		public void ElseInFile ()
 		{
+			// MONOMAC has no availability inside here
 			ParseAndExpect (@"namespace Accessibility {
 	public static partial class AXHearingUtilities {
 #if MONOMAC
@@ -68,7 +71,19 @@ namespace mellite.tests {
 		public static extern bool SupportsBidirectionalStreaming ();
 #endif
 	}
-", new List<string> () { "!MONOMAC" });
+", new List<string> () { "!MONOMAC" }, new List<string> ());
+
+			ParseAndExpect (@"namespace Accessibility {
+	public static partial class AXHearingUtilities {
+#if MONOMAC
+		[Mac (10, 15)]
+		public static extern bool SupportsBidirectionalStreaming ();
+#else
+		[iOS (7, 0)]
+		public static extern bool SupportsBidirectionalStreaming ();
+#endif
+	}
+", new List<string> () { "MONOMAC", "!MONOMAC" }, null);
 		}
 
 		[Fact]
@@ -83,7 +98,7 @@ namespace mellite.tests {
 #endif
 #endif
 	}
-", new List<string> () { "!NET", "MONOMAC" });
+", new List<string> () { "!NET", "MONOMAC" }, new List<string> () { "MONOMAC" });
 
 			ParseAndExpect (@"namespace Accessibility {
 	public static partial class AXHearingUtilities {
@@ -97,7 +112,7 @@ namespace mellite.tests {
 		public static extern bool SupportsBidirectionalStreaming ();
 #endif
 	}
-", new List<string> () { "WATCH", "MONOMAC" });
+", new List<string> () { "WATCH", "MONOMAC" }, new List<string> () { "WATCH", "MONOMAC" });
 		}
 
 		[Fact]
@@ -112,7 +127,7 @@ namespace mellite.tests {
 #endif
 #endif
 	}
-", new List<string> () { "!NET", "MONOMAC", "IOS" });
+", new List<string> () { "!NET", "MONOMAC", "IOS" }, new List<string> () { "MONOMAC", "IOS" });
 		}
 
 		[Fact]
@@ -132,7 +147,7 @@ namespace mellite.tests {
 #endif
 		}
 	}
-}", new List<string> () { "MONOMAC", "WATCH", "!MONOMAC" }, expectConflict: true);
+}", new List<string> () { "MONOMAC", "WATCH", "!MONOMAC" }, null);
 		}
 
 
@@ -151,7 +166,7 @@ namespace mellite.tests {
 		void RegisterServicesMenu (string [] sendTypes, string [] returnTypes);
 #endif
 		}
-}", new List<string> () { "!XAMCORE_4_0" });
+}", new List<string> () { "!XAMCORE_4_0" }, new List<string> ());
 		}
 
 		[Fact]
@@ -166,7 +181,7 @@ namespace mellite.tests {
 		void RegisterServicesMenu (string [] sendTypes, string [] returnTypes);
 #endif
 		}
-}", new List<string> () { "!__IOS__", "!NET" });
+}", new List<string> () { "!__IOS__", "!NET" }, new List<string> () { });
 		}
 
 		[Fact]

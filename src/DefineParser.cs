@@ -49,26 +49,17 @@ namespace mellite {
 			return parts;
 		}
 
-		static string ProcessPotentialSpecialCase (string define)
-		{
-			switch (define) {
-			default:
-				return define;
-			}
-		}
-
 		// Find every line that looks like an availability attribute, and determine what block they are in
-		// Returns null if there are complex defines (A && B) or those that conflict (one block in MAC and one in ELSE), else the list of defines to  
+		// Returns null if they conflict (one block in MAC and one in ELSE), else the list of defines to 
 		public List<string>? FindUniqueDefinesThatCoverAll (string text)
 		{
-			var defines = ParseAllDefines (text).ToList ();
-			var conflictingDefines = defines.Where (d => defines.Contains (Invert (d)));
-			// conflictingDefines = conflictingDefines.Select (d => ProcessPotentialSpecialCase (d));
-
-			if (conflictingDefines.Any ()) {
+			var defines = ParseAllDefines (text);
+			if (defines.Any (d => defines.Contains (Invert (d)))) {
 				return null;
 			}
-			return defines.ToList ();
+			// Now that we know that there aren't conflicts, return the list of things to define:
+			// Those without ! in front (since we by default don't define things)
+			return defines.Where (d => !d.StartsWith ("!") && d != "NET").ToList ();
 		}
 
 		// List all detected defines, even if they conflict.
@@ -103,6 +94,8 @@ namespace mellite {
 				throw new InvalidOperationException ("DefineParser ends with unclosed conditional");
 
 			// Split any A || B to [A, B]
+			// TODO - This is too conservative, as we could have !A || B and declare we need to set B, even though
+			// A isn't set. 
 			return BlocksWithAttributes.SelectMany (d => SplitConditionalParts (d)).ToList ();
 		}
 
