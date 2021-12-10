@@ -13,11 +13,11 @@ using System.Text.RegularExpressions;
 
 namespace mellite {
 	public static class StripperHelpers {
-		// Start of string, #if, space, some number of (word chars, whitespace, |, &), end of string
-		public const string PositiveConditionalTrivia = "^#if [\\w\\s|&]+$";
+		// Start of string, #if, space, some number of (word chars, whitespace, |, &, (, )), end of string
+		public const string PositiveConditionalTrivia = "^#if [\\w\\s|&()]+$";
 
-		// Start of string, #if, space, some number of (!, word chars, whitespace, |, &), end of string
-		public const string ConditionalTrivia = "^#if [!\\w\\s|&]+$";
+		// Start of string, #if, space, some number of (!, word chars, whitespace, |, &, (, )), end of string
+		public const string ConditionalTrivia = "^#if [!\\w\\s|&()]+$";
 
 		public static bool HasIgnorableDefines (string line)
 		{

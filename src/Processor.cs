@@ -22,6 +22,12 @@ namespace mellite {
 	public static class Processor {
 		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines)
 		{
+			// Special case hack - OpenTK has some inline C++ defines in a /* */ comment block that are confusing the parser
+			// and there are literally zero defines we care about, so just early return
+			if (path.EndsWith ("OpenGLES/OpenTK/Platform/Windows/API.cs")) {
+				return;
+			}
+
 			try {
 				var text = ProcessText (File.ReadAllText (path), steps, defines, path);
 				if (text != null) {
