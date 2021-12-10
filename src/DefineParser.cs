@@ -20,26 +20,59 @@ namespace mellite {
 			Conditionals.Clear ();
 		}
 
-		string Invert (string s) => s.StartsWith ("!") ? s.Substring (1) : "!" + s;
+		static string Invert (string s) => s.StartsWith ("!") ? s.Substring (1) : "!" + s;
+
+		// Split the parts of a conditional A && B || C => A, B, C
+		public static List<string> SplitConditionalParts (string define)
+		{
+			// Since we only care about the list of parts, strip all parans first
+			define = define.Replace ("(", "");
+			define = define.Replace (")", "");
+
+			var parts = new List<string> ();
+			while (define.Contains ("||") || define.Contains ("&&")) {
+				int orIndex = define.IndexOf ("||");
+				int andIndex = define.IndexOf ("&&");
+				int index;
+				if (orIndex == -1) {
+					index = andIndex;
+				} else if (andIndex == -1) {
+					index = orIndex;
+				} else {
+					index = Math.Min (andIndex, orIndex);
+				}
+				parts.Add (define.Substring (0, index - 1).Trim ());
+				define = define.Substring (index + 2);
+			}
+			// Add the remaining bit
+			parts.Add (define.Trim ());
+			return parts;
+		}
+
+		static string ProcessPotentialSpecialCase (string define)
+		{
+			switch (define) {
+			default:
+				return define;
+			}
+		}
 
 		// Find every line that looks like an availability attribute, and determine what block they are in
 		// Returns null if there are complex defines (A && B) or those that conflict (one block in MAC and one in ELSE), else the list of defines to  
 		public List<string>? FindUniqueDefinesThatCoverAll (string text)
 		{
-			var defines = ParseAllDefines (text);
-			// Now check for conflicts, both X and !X, if so return null
-			if (defines.Any (d => defines.Contains (Invert (d)))) {
-				return null;
-			}
-			// Any complex conditionals and we're out as well
-			if (defines.Any (d => d.Contains ("||") || d.Contains ("&&"))) {
+			var defines = ParseAllDefines (text).ToList ();
+			var conflictingDefines = defines.Where (d => defines.Contains (Invert (d)));
+			// conflictingDefines = conflictingDefines.Select (d => ProcessPotentialSpecialCase (d));
+
+			if (conflictingDefines.Any ()) {
 				return null;
 			}
 			return defines.ToList ();
 		}
 
 		// List all detected defines, even if they conflict.
-		public HashSet<string> ParseAllDefines (string text)
+		public List<string> ParseAllDefines (string text)
 		{
 			int lineCount = 0;
 			foreach (var line in text.SplitLines ()) {
@@ -69,7 +102,8 @@ namespace mellite {
 			if (Conditionals.Any ())
 				throw new InvalidOperationException ("DefineParser ends with unclosed conditional");
 
-			return BlocksWithAttributes;
+			// Split any A || B to [A, B]
+			return BlocksWithAttributes.SelectMany (d => SplitConditionalParts (d)).ToList ();
 		}
 
 		void CheckThenClearCurrentBlock ()

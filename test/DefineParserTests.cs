@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Xunit;
 
@@ -9,9 +10,8 @@ namespace mellite.tests {
 		{
 			var found = (new DefineParser ()).ParseAllDefines (text);
 			Assert.Equal (defines, found);
-			if (expectConflict) {
-				Assert.Null ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text));
-			}
+			var uniqueDefines = ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text));
+			Assert.Equal (expectConflict, uniqueDefines == null);
 		}
 
 		[Fact]
@@ -112,7 +112,7 @@ namespace mellite.tests {
 #endif
 #endif
 	}
-", new List<string> () { "!NET", "MONOMAC || IOS" }, expectConflict: true);
+", new List<string> () { "!NET", "MONOMAC", "IOS" });
 		}
 
 		[Fact]
@@ -152,6 +152,31 @@ namespace mellite.tests {
 #endif
 		}
 }", new List<string> () { "!XAMCORE_4_0" });
+		}
+
+		[Fact]
+		public void SplitConditions ()
+		{
+			ParseAndExpect (@"namespace AppKit {
+	[BaseType (typeof (NSObject))]
+	interface NSApplicationDelegate {
+#if !__IOS__ && !NET
+		[Obsolete (""Use the 'RegisterServicesMenu2' on NSApplication."")]
+		[Export (""registerServicesMenuSendTypes:returnTypes:""), EventArgs (""NSApplicationRegister"")]
+		void RegisterServicesMenu (string [] sendTypes, string [] returnTypes);
+#endif
+		}
+}", new List<string> () { "!__IOS__", "!NET" });
+		}
+
+		[Fact]
+		public void SplitPartsTest ()
+		{
+			Assert.Equal (new [] { "A" }, DefineParser.SplitConditionalParts ("A"));
+			Assert.Equal (new [] { "A", "B" }, DefineParser.SplitConditionalParts ("A && B"));
+			Assert.Equal (new [] { "!A", "B" }, DefineParser.SplitConditionalParts ("!A && B"));
+			Assert.Equal (new [] { "A", "B", "C" }, DefineParser.SplitConditionalParts ("A && B || C"));
+			Assert.Equal (new [] { "A", "B", "C" }, DefineParser.SplitConditionalParts ("A && (B || C)"));
 		}
 	}
 }
