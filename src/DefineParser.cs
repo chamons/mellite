@@ -51,15 +51,20 @@ namespace mellite {
 
 		// Find every line that looks like an availability attribute, and determine what block they are in
 		// Returns null if they conflict (one block in MAC and one in ELSE), else the list of defines to 
-		public List<string>? FindUniqueDefinesThatCoverAll (string text)
+		public List<string>? FindUniqueDefinesThatCoverAll (string text, bool ignoreNETDefines)
 		{
 			var defines = ParseAllDefines (text);
+
+			if (ignoreNETDefines) {
+				defines = defines.Where (d => d != "NET" && d != "!NET").ToList ();
+			}
+
 			if (defines.Any (d => defines.Contains (Invert (d)))) {
 				return null;
 			}
 			// Now that we know that there aren't conflicts, return the list of things to define:
 			// Those without ! in front (since we by default don't define things)
-			return defines.Where (d => !d.StartsWith ("!") && d != "NET").ToList ();
+			return defines.Where (d => !d.StartsWith ("!")).ToList ();
 		}
 
 		// List all detected defines, even if they conflict.
@@ -93,10 +98,10 @@ namespace mellite {
 			if (Conditionals.Any ())
 				throw new InvalidOperationException ("DefineParser ends with unclosed conditional");
 
-			// Split any A || B to [A, B]
+			// Split any A || B to [A, B]. Use a HashSet to de-deduplicate 
 			// TODO - This is too conservative, as we could have !A || B and declare we need to set B, even though
 			// A isn't set. 
-			return BlocksWithAttributes.SelectMany (d => SplitConditionalParts (d)).ToList ();
+			return new HashSet<string> (BlocksWithAttributes.SelectMany (d => SplitConditionalParts (d))).ToList ();
 		}
 
 		void CheckThenClearCurrentBlock ()

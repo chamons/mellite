@@ -43,13 +43,7 @@ namespace mellite {
 		{
 			switch (steps) {
 			case ProcessSteps.ConvertXamarinAttributes:
-				CSharpParseOptions options = new CSharpParseOptions (preprocessorSymbols: defines);
-				SyntaxTree tree = CSharpSyntaxTree.ParseText (text, options);
-
-				CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
-
-				root = (CompilationUnitSyntax) root!.Accept (new AttributeConverterVisitor ())!;
-				return root!.ToFullString ();
+				return Converter.Convert (text, defines);
 			case ProcessSteps.StripExistingNET6Attributes:
 				return (new AttributeStripper ()).StripText (text);
 			case ProcessSteps.StripConditionBlocks:
@@ -59,16 +53,16 @@ namespace mellite {
 			case ProcessSteps.ListDefinesDetected: {
 				var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
 				Console.WriteLine (detectedDefines != null ? $"Found Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
-				var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text);
+				var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
 				Console.WriteLine ();
 				Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
 				return null;
 			}
 			case ProcessSteps.ListDefineUnresolvableFiles: {
-				if ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text) == null) {
-					Console.WriteLine (path);
+				if ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
+					Console.WriteLine ($"Could not process: {path}");
 					var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
-					Console.WriteLine (detectedDefines != null ? $"Found Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
+					Console.WriteLine (detectedDefines != null ? $"\tFound Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
 				}
 				return null;
 			}

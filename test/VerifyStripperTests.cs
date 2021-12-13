@@ -87,7 +87,6 @@ namespace UIKit {
 }
 ", @"namespace AppKit {
 	partial class NSLayoutManager {
-	[Verify] // Nested Conditionals are not always correctly processed
 #if IOS
 		[iOS (12,2)]
 		[DllImport (Constants.UIKitLibrary)]

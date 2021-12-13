@@ -11,7 +11,7 @@ namespace mellite.tests {
 			var found = (new DefineParser ()).ParseAllDefines (text);
 			Assert.Equal (expectedDefines, found);
 
-			var uniqueDefines = ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text));
+			var uniqueDefines = ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false));
 			Assert.Equal (expectedUniqueDefines, uniqueDefines);
 		}
 

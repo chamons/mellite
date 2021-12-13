@@ -7,6 +7,20 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using mellite.Utilities;
 
 namespace mellite {
+	class Converter {
+		public static string Convert (string text, List<string> defines)
+		{
+			CSharpParseOptions options = new CSharpParseOptions (preprocessorSymbols: defines);
+			SyntaxTree tree = CSharpSyntaxTree.ParseText (text, options);
+
+			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
+
+			root = (CompilationUnitSyntax) root!.Accept (new AttributeConverterVisitor ())!;
+			return root!.ToFullString ();
+		}
+	}
+
+
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
 		public AttributeConverterVisitor () { }
 
