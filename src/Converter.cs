@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -10,7 +11,12 @@ namespace mellite {
 	class Converter {
 		public static string Convert (string text, List<string> defines)
 		{
-			CSharpParseOptions options = new CSharpParseOptions (preprocessorSymbols: defines);
+			var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text, false);
+			if (uniqueDefines == null) {
+				throw new InvalidOperationException ("Converter was unable to find unique defines that cover all attributes. Run --strip-verify and fix first.");
+			}
+
+			CSharpParseOptions options = new CSharpParseOptions (preprocessorSymbols: defines.Union (uniqueDefines));
 			SyntaxTree tree = CSharpSyntaxTree.ParseText (text, options);
 
 			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
