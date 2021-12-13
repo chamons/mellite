@@ -19,11 +19,6 @@ namespace mellite {
 		// Start of string, #if, space, some number of (!, word chars, whitespace, |, &, (, )), end of string
 		public const string ConditionalTrivia = "^#if [!\\w\\s|&()]+$";
 
-		public static bool HasIgnorableDefines (string line)
-		{
-			return line.Contains ("XAMCORE_4_0");
-		}
-
 		public static string TrimLine (string line)
 		{
 			int commentIndex = line.IndexOf ("//");
