@@ -13,11 +13,12 @@ namespace mellite {
 		Stack<string> Conditionals = new Stack<string> ();
 		string? CurrentConditional => Conditionals.FirstOrDefault ();
 
-		void Reset ()
+		string? VerboseConditional;
+		int LineCount = 0;
+
+		public DefineParser (string? verboseConditional)
 		{
-			Chunk.Clear ();
-			BlocksWithAttributes.Clear ();
-			Conditionals.Clear ();
+			VerboseConditional = verboseConditional;
 		}
 
 		static string Invert (string s) => s.StartsWith ("!") ? s.Substring (1) : "!" + s;
@@ -70,7 +71,6 @@ namespace mellite {
 		// List all detected defines, even if they conflict.
 		public List<string> ParseAllDefines (string text)
 		{
-			int lineCount = 0;
 			foreach (var line in text.SplitLines ()) {
 				switch (StripperHelpers.TrimLine (line)) {
 				case "#else":
@@ -93,7 +93,7 @@ namespace mellite {
 					break;
 				}
 				}
-				lineCount += 1;
+				LineCount += 1;
 			}
 			if (Conditionals.Any ())
 				throw new InvalidOperationException ("DefineParser ends with unclosed conditional");
@@ -115,6 +115,9 @@ namespace mellite {
 				// Process for every conditional in our stack
 				foreach (var conditional in Conditionals) {
 					BlocksWithAttributes.Add (conditional);
+					if (VerboseConditional != null && SplitConditionalParts (conditional).Any (c => c == VerboseConditional)) {
+						Console.Error.WriteLine (LineCount);
+					}
 				}
 			}
 			Chunk.Clear ();

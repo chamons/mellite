@@ -1,0 +1,1 @@
+dotnet run --project ../src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/$1 --detect-unresolvable --verbose-conditional=$2

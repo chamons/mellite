@@ -8,10 +8,10 @@ namespace mellite.tests {
 	public class DefineParserTests {
 		void ParseAndExpect (string text, List<string> expectedDefines, List<string>? expectedUniqueDefines)
 		{
-			var found = (new DefineParser ()).ParseAllDefines (text);
+			var found = (new DefineParser (null)).ParseAllDefines (text);
 			Assert.Equal (expectedDefines, found);
 
-			var uniqueDefines = ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false));
+			var uniqueDefines = ((new DefineParser (null)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false));
 			Assert.Equal (expectedUniqueDefines, uniqueDefines);
 		}
 

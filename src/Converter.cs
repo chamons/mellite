@@ -9,9 +9,9 @@ using mellite.Utilities;
 
 namespace mellite {
 	class Converter {
-		public static string Convert (string text, List<string> defines)
+		public static string Convert (string text, List<string> defines, string? verboseConditional)
 		{
-			var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text, false);
+			var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, false);
 			if (uniqueDefines == null) {
 				throw new InvalidOperationException ("Converter was unable to find unique defines that cover all attributes. Run --strip-verify and fix first.");
 			}

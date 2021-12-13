@@ -20,7 +20,7 @@ namespace mellite {
 	};
 
 	public static class Processor {
-		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines)
+		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines, string? verboseConditional)
 		{
 			// Special case hack - OpenTK has some inline C++ defines in a /* */ comment block that are confusing the parser
 			// and there are literally zero defines we care about, so just early return
@@ -29,7 +29,7 @@ namespace mellite {
 			}
 
 			try {
-				var text = ProcessText (File.ReadAllText (path), steps, defines, path);
+				var text = ProcessText (File.ReadAllText (path), steps, defines, path, verboseConditional);
 				if (text != null) {
 					File.WriteAllText (path, text);
 				}
@@ -39,29 +39,30 @@ namespace mellite {
 			}
 		}
 
-		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? path = null)
+		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? path = null, string? verboseConditional = null)
 		{
 			switch (steps) {
 			case ProcessSteps.ConvertXamarinAttributes:
-				return Converter.Convert (text, defines);
+				return Converter.Convert (text, defines, verboseConditional);
 			case ProcessSteps.StripExistingNET6Attributes:
 				return (new AttributeStripper ()).StripText (text);
 			case ProcessSteps.StripConditionBlocks:
 				return (new ConditionBlockStripper ()).StripText (text);
 			case ProcessSteps.StripVerify:
-				return (new VerifyStripper ()).StripText (text);
+				return (new VerifyStripper ()).StripText (text, verboseConditional);
 			case ProcessSteps.ListDefinesDetected: {
-				var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
+				var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
 				Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
-				var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
+
+				var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
 				Console.WriteLine ();
 				Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
 				return null;
 			}
 			case ProcessSteps.ListDefineUnresolvableFiles: {
-				if ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
+				if ((new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
 					Console.WriteLine ($"Could not process: {path}");
-					var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
+					var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
 					Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
 				}
 				return null;

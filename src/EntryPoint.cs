@@ -19,6 +19,7 @@ namespace mellite {
 			LocatorOptions locatorOptions = new LocatorOptions ();
 			ProcessSteps steps = ProcessSteps.ConvertXamarinAttributes;
 			List<string> defines = new List<string> ();
+			string? verboseConditional = null;
 
 			OptionSet os = new OptionSet ()
 			{
@@ -31,6 +32,7 @@ namespace mellite {
 				{ "detect-defines", "Detect the full set of defines needed to process all availability attributes in a file", i => steps = ProcessSteps.ListDefinesDetected },
 				{ "detect-unresolvable", "Detect the files that can not be resolved due to complex or conflicting defines", i => steps = ProcessSteps.ListDefineUnresolvableFiles },
 				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
+				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => verboseConditional = v },
 			};
 
 			try {
@@ -56,7 +58,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Processor.ProcessFile (file, steps, defines);
+					Processor.ProcessFile (file, steps, defines, verboseConditional);
 				}
 				break;
 			}

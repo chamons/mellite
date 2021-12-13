@@ -321,13 +321,13 @@ namespace mellite {
 			File.Clear ();
 		}
 
-		public string StripText (string text)
+		public string StripText (string text, string? verboseConditional)
 		{
 			Reset ();
 
 			// First see if there are a set of unique defines that exist for the file, if so skip verify that file
 			// Skip NET and !NET since very likely those are attributes that will be stripped
-			var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: true);
+			var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: true);
 			if (uniqueDefines != null) {
 				return text;
 			}
@@ -346,7 +346,7 @@ namespace mellite {
 				File.AppendLine (line);
 			}
 
-			return addedVerify ? $"// Verify found under defines: {String.Join (' ', (new DefineParser ()).ParseAllDefines (text))} \n" + File.ToString () : File.ToString ();
+			return addedVerify ? $"// Verify found under defines: {String.Join (' ', (new DefineParser (verboseConditional)).ParseAllDefines (text))} \n" + File.ToString () : File.ToString ();
 		}
 	}
 
