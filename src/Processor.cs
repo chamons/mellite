@@ -52,7 +52,7 @@ namespace mellite {
 				return (new VerifyStripper ()).StripText (text);
 			case ProcessSteps.ListDefinesDetected: {
 				var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
-				Console.WriteLine (detectedDefines != null ? $"Found Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
+				Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
 				var uniqueDefines = (new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
 				Console.WriteLine ();
 				Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
@@ -62,7 +62,7 @@ namespace mellite {
 				if ((new DefineParser ()).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
 					Console.WriteLine ($"Could not process: {path}");
 					var detectedDefines = (new DefineParser ()).ParseAllDefines (text);
-					Console.WriteLine (detectedDefines != null ? $"\tFound Defines:\n{String.Join ('\n', detectedDefines)}" : "Error parsing defines.");
+					Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
 				}
 				return null;
 			}
