@@ -86,6 +86,9 @@ namespace mellite {
 					break;
 				case string s: {
 					if (Regex.IsMatch (s, StripperHelpers.ConditionalTrivia)) {
+						if (Conditionals.Any ()) {
+							CheckThenClearCurrentBlock ();
+						}
 						Conditionals.Push (s.Split ("#if") [1].Trim ());
 					} else if (CurrentConditional != null) {
 						Chunk.Append (s);
