@@ -112,7 +112,7 @@ namespace mellite.tests {
 		public static extern bool SupportsBidirectionalStreaming ();
 #endif
 	}
-", new List<string> () { "MONOMAC", "WATCH" }, new List<string> () { "MONOMAC", "WATCH" });
+", new List<string> () { "MONOMAC", "WATCH" }, new List<string> () { "MONOMAC" }); // Ignore WATCH explicitly for uniqueness
 		}
 
 		[Fact]

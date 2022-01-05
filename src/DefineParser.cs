@@ -56,6 +56,10 @@ namespace mellite {
 		{
 			var defines = ParseAllDefines (text);
 
+			// We explicitly do not care about WATCH when it comes to conflicts
+			defines = defines.Where (d => d != "WATCH").ToList ();
+
+			// We conditionally does not care about NET/!NET
 			if (ignoreNETDefines) {
 				defines = defines.Where (d => d != "NET" && d != "!NET").ToList ();
 			}
@@ -63,6 +67,7 @@ namespace mellite {
 			if (defines.Any (d => defines.Contains (Invert (d)))) {
 				return null;
 			}
+
 			// Now that we know that there aren't conflicts, return the list of things to define:
 			// Those without ! in front (since we by default don't define things)
 			return defines.Where (d => !d.StartsWith ("!")).ToList ();
