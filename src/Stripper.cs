@@ -449,8 +449,13 @@ namespace mellite {
 					case "Watch":
 					case "UnsupportedOSPlatform":
 					case "SupportedOSPlatform":
-					case "Obsolete": // Obsolete can have DiagnosticId/UrlFormat which are NET6 specific :(
 						HasAnyAvailability = true;
+						break;
+					case "Obsolete":
+						if (attribute.ArgumentList?.Arguments.Count > 1) {
+							// Obsolete can have DiagnosticId/UrlFormat which are NET6 specific :(
+							HasAnyAvailability = true;
+						}
 						break;
 					}
 				}

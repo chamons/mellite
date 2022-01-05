@@ -112,7 +112,7 @@ namespace mellite.tests {
 		public static extern bool SupportsBidirectionalStreaming ();
 #endif
 	}
-", new List<string> () { "WATCH", "MONOMAC" }, new List<string> () { "WATCH", "MONOMAC" });
+", new List<string> () { "MONOMAC", "WATCH" }, new List<string> () { "MONOMAC", "WATCH" });
 		}
 
 		[Fact]
@@ -147,7 +147,7 @@ namespace mellite.tests {
 #endif
 		}
 	}
-}", new List<string> () { "MONOMAC", "WATCH", "!MONOMAC" }, null);
+}", new List<string> () { "MONOMAC", "!MONOMAC", "WATCH" }, null);
 		}
 
 
@@ -161,7 +161,7 @@ namespace mellite.tests {
 	[Protocol]
 	interface NSApplicationDelegate {
 #if !XAMCORE_4_0 // Needs to move from delegate in next API break
-		[Obsolete (""Use the 'RegisterServicesMenu2' on NSApplication."")]
+		[Obsolete (""This API is not available on this platform."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 		[Export (""registerServicesMenuSendTypes:returnTypes:""), EventArgs (""NSApplicationRegister"")]
 		void RegisterServicesMenu (string [] sendTypes, string [] returnTypes);
 #endif
@@ -176,12 +176,41 @@ namespace mellite.tests {
 	[BaseType (typeof (NSObject))]
 	interface NSApplicationDelegate {
 #if !__IOS__ && !NET
-		[Obsolete (""Use the 'RegisterServicesMenu2' on NSApplication."")]
+		[Obsolete (""This API is not available on this platform."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 		[Export (""registerServicesMenuSendTypes:returnTypes:""), EventArgs (""NSApplicationRegister"")]
 		void RegisterServicesMenu (string [] sendTypes, string [] returnTypes);
 #endif
 		}
 }", new List<string> () { "!__IOS__", "!NET" }, new List<string> () { });
+		}
+
+		[Fact]
+		public void ObsoleteOnlyBlockingIfNet6Arged ()
+		{
+			// This Obsolete should be ignored as it doesn't use any NET6 specific bits
+			ParseAndExpect (@"namespace AppKit {
+	[BaseType (typeof (NSObject))]
+	interface NSApplicationDelegate {
+#if !__IOS__
+		[Obsolete (""Use 'State' instead."")]
+		SKDownloadState DownloadState { get; }
+#else
+		[NoWatch]
+		SKDownloadState DownloadState { get; 
+#endif
+		}
+	}", new List<string> () { "__IOS__" }, new List<string> () { "__IOS__" });
+
+			// This Obsolete should _not_ be ignored as does use NET6 specific bits
+			ParseAndExpect (@"namespace AppKit {
+	[BaseType (typeof (NSObject))]
+	interface NSApplicationDelegate {
+#if !__IOS__
+		[Obsolete (""This API is not available on this platform."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+		SKDownloadState DownloadState { get; }
+#endif
+		}
+	}", new List<string> () { "!__IOS__" }, new List<string> () { });
 		}
 
 		[Fact]
