@@ -786,5 +786,37 @@ namespace binding
 }
 ", defines: new List<string> () { "HAS_NOTIFICATIONCENTER" });
 		}
+
+		[Fact]
+		public void EnumConvert ()
+		{
+			TestConversion (@"[Mac (10,10)]
+[NoiOS][NoTV][NoWatch][NoMacCatalyst]
+[Native]
+public enum AVCaptureViewControlsStyle : long {
+	Inline,
+	Floating,
+	InlineDeviceSelection,
+	Default = Inline,
+}", @"#if NET
+[SupportedOSPlatform (""macos10.10"")]
+[UnsupportedOSPlatform (""ios"")]
+[UnsupportedOSPlatform (""tvos"")]
+[UnsupportedOSPlatform (""maccatalyst"")]
+#else
+[Mac (10,10)]
+[NoiOS]
+[NoTV]
+[NoWatch]
+[NoMacCatalyst]
+#endif
+[Native]
+public enum AVCaptureViewControlsStyle : long {
+	Inline,
+	Floating,
+	InlineDeviceSelection,
+	Default = Inline,
+}");
+		}
 	}
 }
