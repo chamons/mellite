@@ -48,5 +48,25 @@ namespace mellite.tests {
 			Assert.Single (results);
 			Assert.Contains (Path.Combine (src, "foo.cs"), results);
 		}
+
+		[Fact]
+		public void SkipRootFiles ()
+		{
+			var cache = Cache.CreateTemporaryDirectory ();
+
+			var src = Path.Combine (cache, "src");
+			Directory.CreateDirectory (src);
+			File.WriteAllText (Path.Combine (src, "foo.cs"), "");
+			File.WriteAllText (Path.Combine (src, "foo2.cs"), "");
+
+			var sub = Path.Combine (src, "dir");
+			Directory.CreateDirectory (sub);
+			File.WriteAllText (Path.Combine (sub, "bar.cs"), "");
+			File.WriteAllText (Path.Combine (sub, "buzz.cs"), "");
+			var results = new HashSet<string> (Locator.LocateFiles (src, new LocatorOptions () { IgnoreRoot = true }));
+			Assert.Equal (2, results.Count);
+			Assert.Contains (Path.Combine (sub, "bar.cs"), results);
+			Assert.Contains (Path.Combine (sub, "buzz.cs"), results);
+		}
 	}
 }

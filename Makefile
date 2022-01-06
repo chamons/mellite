@@ -14,10 +14,12 @@ reset::
 test::
 	$(Q) dotnet test --nologo test/mellite.tests.csproj
 
-
-CONVERT_CMD=dotnet run --project src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/
+CONVERT_CMD=dotnet run --project src/mellite.csproj -- --ignore=build --ignore-root ~/Programming/xamarin-macios/src/
 convert::
 	$(Q) $(CONVERT_CMD) --strip-verify
 	$(Q) $(CONVERT_CMD) --strip-attributes
 	$(Q) $(CONVERT_CMD) --strip-blocks
 	$(Q) $(CONVERT_CMD) 
+
+verify::
+	$(Q) $(CONVERT_CMD) --strip-verify

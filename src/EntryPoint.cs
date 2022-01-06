@@ -33,6 +33,7 @@ namespace mellite {
 				{ "detect-unresolvable", "Detect the files that can not be resolved due to complex or conflicting defines", i => steps = ProcessSteps.ListDefineUnresolvableFiles },
 				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
 				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => verboseConditional = v },
+				{ "ignore-root", "Only process files in subdirectories of the target directory, do not process root level files", _ => locatorOptions.IgnoreRoot = true },
 			};
 
 			try {
