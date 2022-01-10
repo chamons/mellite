@@ -9,10 +9,12 @@ namespace mellite {
 
 	// Harvest information from a given .NET assembly to inform AttributeHarvester processing
 	public class AssemblyHarvester {
-		Dictionary<string, HarvestedAvailabilityInfo> Data = new Dictionary<string, HarvestedAvailabilityInfo> ();
+		Dictionary<string, List<HarvestedAvailabilityInfo>> Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
 
-		public Dictionary<string, HarvestedAvailabilityInfo> Harvest (string path)
+		public Dictionary<string, List<HarvestedAvailabilityInfo>> Harvest (string path)
 		{
+			Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
+
 			var resolver = new DefaultAssemblyResolver ();
 			resolver.AddSearchDirectory (Path.GetDirectoryName (path));
 			var parameters = new ReaderParameters () {
@@ -54,6 +56,18 @@ namespace mellite {
 			case EventDefinition e:
 				attributes = GetAvailabilityAttributes (e.CustomAttributes).ToList ();
 				break;
+			}
+			if (attributes.Any ()) {
+				Data [GetKeyname (member, parent)] = attributes;
+			}
+		}
+
+		string GetKeyname (MemberReference member, MemberReference? parent)
+		{
+			if (parent != null) {
+				return parent.FullName + "." + member.Name;
+			} else {
+				return member.FullName;
 			}
 		}
 
