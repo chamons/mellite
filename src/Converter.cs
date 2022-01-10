@@ -48,7 +48,7 @@ namespace mellite {
 		// An example of desired behavior - https://github.com/xamarin/xamarin-macios/blob/main/src/AudioUnit/AudioComponentDescription.cs#L166
 		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, BaseTypeDeclarationSyntax? parent)
 		{
-			HarvestedMemberInfo info = Harvester.Process (member, parent);
+			HarvestedMemberInfo info = AttributeHarvester.Process (member, parent);
 
 			var createdAttributes = new List<AttributeListSyntax> ();
 			// Some general rules for trivia in created nodes

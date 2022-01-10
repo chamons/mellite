@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -22,6 +21,14 @@ namespace mellite {
 			Attribute = attribute;
 			Target = target;
 			Comment = comment;
+		}
+
+		public HarvestedAvailabilityInfo (string name, string argList)
+		{
+			var args = SyntaxFactory.ParseAttributeArgumentList ($"({argList})");
+			Attribute = SyntaxFactory.Attribute (SyntaxFactory.ParseName (name), args);
+			Target = null;
+			Comment = null;
 		}
 
 		public static HarvestedAvailabilityInfo From (AttributeSyntax attribute, AttributeListSyntax list)
@@ -64,7 +71,7 @@ namespace mellite {
 	}
 
 	// Harvest information from a given Roslyn node for later conversion
-	public static class Harvester {
+	public static class AttributeHarvester {
 		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent)
 		{
 			var existingAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
@@ -132,7 +139,7 @@ namespace mellite {
 				unavailableAttributesToProcess.Any () ||
 				obsoleteAttributesToProcess.Any ();
 			if (hasAnyAvailability && parent != null) {
-				HarvestedMemberInfo parentInfo = Harvester.Process (parent, null);
+				HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null);
 				List<string> fullyUnavailablePlatforms = unavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
 					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
 				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
@@ -229,4 +236,6 @@ namespace mellite {
 			return (new SyntaxTriviaList (nonWhitespaceTrivia), newlines, rest);
 		}
 	}
+
+
 }
