@@ -397,8 +397,8 @@ namespace mellite {
 					case "Watch":
 					case "UnsupportedOSPlatform":
 					case "SupportedOSPlatform":
+					case "Obsolete": // Assume all Obsolete are safe to remove
 						break;
-					case "Obsolete": // Obsolete can have DiagnosticId/UrlFormat which are NET6 specific :(
 					default:
 						EverythingIsAvailabilityAttribute = false;
 						break;

@@ -251,6 +251,50 @@ namespace mellite.tests {
 }
 ");
 		}
+
+		[Fact]
+		public void AVFoundationSample ()
+		{
+			TestStrip (
+		@"#if !NET
+	[Mac (10, 10), NoiOS, NoWatch, NoTV]
+#if !MONOMAC
+	[Obsolete (""This API is not available on this platform."")]
+#endif
+#else
+#if !MONOMAC
+	[Obsolete (""This API is not available on this platform."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#endif // !NET
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVSampleCursorSyncInfo {
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsFullSync;
+
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsPartialSync;
+
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsDroppable;
+}", @"#if !NET
+	[Mac (10, 10), NoiOS, NoWatch, NoTV]
+#if !MONOMAC
+	[Obsolete (""This API is not available on this platform."")]
+#endif
+#endif // !NET
+	[StructLayout (LayoutKind.Sequential)]
+	public struct AVSampleCursorSyncInfo {
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsFullSync;
+
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsPartialSync;
+
+		[MarshalAs (UnmanagedType.I1)]
+		public bool IsDroppable;
+}
+");
+		}
 	}
 }
 

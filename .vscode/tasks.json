@@ -49,7 +49,7 @@
             "args": [
                 "test",
                 "${workspaceFolder}/test/mellite.tests.csproj",
-                "--filter=PartialInfoConversion ",
+                "--filter=AVFoundationSample",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
             ],
