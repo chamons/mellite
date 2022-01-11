@@ -39,6 +39,7 @@ namespace mellite {
 		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 		public override SyntaxNode? VisitEventDeclaration (EventDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 		public override SyntaxNode? VisitEnumDeclaration (EnumDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
+		public override SyntaxNode? VisitStructDeclaration (StructDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 
 		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
 		{

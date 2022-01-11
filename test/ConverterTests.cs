@@ -819,6 +819,28 @@ public enum AVCaptureViewControlsStyle : long {
 }");
 		}
 
+		[Fact]
+		public void StructConvert ()
+		{
+			TestConversion (@"[Mac (10,10)]
+[NoiOS][NoTV][NoWatch][NoMacCatalyst]
+public struct AVCaptureViewControlsStyle {
+}", @"#if NET
+[SupportedOSPlatform (""macos10.10"")]
+[UnsupportedOSPlatform (""ios"")]
+[UnsupportedOSPlatform (""tvos"")]
+[UnsupportedOSPlatform (""maccatalyst"")]
+#else
+[Mac (10,10)]
+[NoiOS]
+[NoTV]
+[NoWatch]
+[NoMacCatalyst]
+#endif
+public struct AVCaptureViewControlsStyle {
+}");
+		}
+
 		// Convert a partial class's member with the parent info defined in another assembly (outside of our scope) 
 		[Fact]
 		public void PartialInfoConversion ()
