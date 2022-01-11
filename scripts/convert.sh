@@ -15,6 +15,6 @@ dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build ~/Progr
 echo "Completed - Please review and commit."
 read _
 echo "Running final conversion..."
-dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/$1/
+dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build ~/Programming/xamarin-macios/src/$1/ --harvest-assembly=/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll
 echo "Completed - Please review and commit."
 read _
