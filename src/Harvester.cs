@@ -72,7 +72,7 @@ namespace mellite {
 
 	// Harvest information from a given Roslyn node for later conversion
 	public static class AttributeHarvester {
-		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent)
+		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, BaseTypeDeclarationSyntax? parent, AssemblyHarvestInfo? assemblyInfo)
 		{
 			var existingAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
 			var nonAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
@@ -139,9 +139,22 @@ namespace mellite {
 				unavailableAttributesToProcess.Any () ||
 				obsoleteAttributesToProcess.Any ();
 			if (hasAnyAvailability && parent != null) {
-				HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null);
+				// First copy down any information from the harvested assembly, if it exists
 				List<string> fullyUnavailablePlatforms = unavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
 					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
+
+				if (assemblyInfo != null) {
+					string fullName = ((NamespaceDeclarationSyntax) parent.Parent!).Name.ToString () + "." + parent.Identifier.ToString ();
+					if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
+						HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
+						CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+						CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+						CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+						CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+					}
+				}
+				// Then copy down any information from our current roslyn context
+				HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null, assemblyInfo);
 				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
 				CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
 				CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
@@ -156,17 +169,86 @@ namespace mellite {
 			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, nonWhitespaceTrivia, newlineTrivia, indentTrivia);
 		}
 
+		public static HarvestedMemberInfo ProcessAssemblyParent (List<HarvestedAvailabilityInfo> infos)
+		{
+			var introducedAttributesToProcess = new List<AttributeSyntax> ();
+			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
+			var unavailableAttributesToProcess = new List<AttributeSyntax> ();
+			var obsoleteAttributesToProcess = new List<AttributeSyntax> ();
+
+			foreach (var info in infos) {
+				switch (info.Attribute.Name.ToString ()) {
+				case "Mac":
+				case "iOS":
+				case "TV":
+				case "MacCatalyst":
+				case "Introduced": {
+					AddIfSupportedPlatform (info.Attribute, introducedAttributesToProcess);
+					break;
+				}
+				case "Deprecated": {
+					AddIfSupportedPlatform (info.Attribute, deprecatedAttributesToProcess);
+					break;
+				}
+				case "NoMac":
+				case "NoiOS":
+				case "NoTV":
+				case "NoMacCatalyst":
+				case "Unavailable": {
+					AddIfSupportedPlatform (info.Attribute, unavailableAttributesToProcess);
+					break;
+				}
+				case "Obsoleted": {
+					AddIfSupportedPlatform (info.Attribute, obsoleteAttributesToProcess);
+					break;
+				}
+				default:
+					break;
+				}
+			}
+
+			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null);
+		}
+
 		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source, List<string> fullyUnavailablePlatforms)
 		{
 			foreach (var s in source) {
 				string? platform = PlatformArgumentParser.GetPlatformFromNode (s);
 				// Only copy if we don't have a matching kind (Introduced vs Introduced) that also matches platform (iOS)
-				bool noExistingExactMatch = !destination.Any (d => d.Name.ToString () == s.Name.ToString () && PlatformArgumentParser.GetPlatformFromNode (d) == platform);
+				bool noExistingExactMatch = !destination.Any (d => AreMatchingPlatforms (s, d));
 				// If we have an unversioned "NoPlatform" for our platform, also skip
 				bool notFullyUnsupported = !fullyUnavailablePlatforms.Any (p => p == platform);
 				if (noExistingExactMatch && notFullyUnsupported) {
 					destination.Add (s);
 				}
+			}
+		}
+
+		static bool AreMatchingPlatforms (AttributeSyntax left, AttributeSyntax right)
+		{
+			// Check that the platforms line up
+			bool matchingPlatforms = PlatformArgumentParser.GetPlatformFromNode (left) == PlatformArgumentParser.GetPlatformFromNode (right);
+			// Check that they are compatible kinds ([iOS] and [Introduced])
+			bool matchingAttributeKinds = GetComparablePlatformName (left.Name.ToString ()) == GetComparablePlatformName (right.Name.ToString ());
+			return matchingPlatforms && matchingAttributeKinds;
+		}
+
+		// Convert our shortcut names to Introduced or Unavailable for comparision
+		static string GetComparablePlatformName (string name)
+		{
+			switch (name) {
+			case "Mac":
+			case "iOS":
+			case "TV":
+			case "MacCatalyst":
+				return "Introduced";
+			case "NoMac":
+			case "NoiOS":
+			case "NoTV":
+			case "NoMacCatalyst":
+				return "Unavailable";
+			default:
+				return name;
 			}
 		}
 

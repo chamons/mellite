@@ -1,17 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 
 using Mono.Cecil;
 
 namespace mellite {
+	public class AssemblyHarvestInfo {
+		public ReadOnlyDictionary<string, List<HarvestedAvailabilityInfo>> Data;
+
+		public AssemblyHarvestInfo (Dictionary<string, List<HarvestedAvailabilityInfo>> data)
+		{
+			Data = new ReadOnlyDictionary<string, List<HarvestedAvailabilityInfo>> (data);
+		}
+	}
 
 	// Harvest information from a given .NET assembly to inform AttributeHarvester processing
 	public class AssemblyHarvester {
 		Dictionary<string, List<HarvestedAvailabilityInfo>> Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
 
-		public Dictionary<string, List<HarvestedAvailabilityInfo>> Harvest (string path)
+		public AssemblyHarvestInfo Harvest (string path)
 		{
 			Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
 
@@ -23,21 +32,10 @@ namespace mellite {
 			var assembly = AssemblyDefinition.ReadAssembly (path, parameters);
 			foreach (var module in assembly.Modules) {
 				foreach (var type in module.Types) {
-					foreach (var method in type.Methods) {
-						Process (method, type);
-					}
-					foreach (var prop in type.Properties) {
-						Process (prop, type);
-					}
-					foreach (var e in type.Events) {
-						Process (e, type);
-					}
-					if (type.IsEnum) {
-						Process (type, null);
-					}
+					Data [type.FullName] = GetAvailabilityAttributes (type.CustomAttributes).ToList ();
 				}
 			}
-			return Data;
+			return new AssemblyHarvestInfo (Data);
 		}
 
 		void Process (MemberReference member, MemberReference? parent)

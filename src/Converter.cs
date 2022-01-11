@@ -9,7 +9,7 @@ using mellite.Utilities;
 
 namespace mellite {
 	class Converter {
-		public static string Convert (string text, List<string> defines, string? verboseConditional)
+		public static string Convert (string text, List<string> defines, string? verboseConditional, AssemblyHarvestInfo? assemblyInfo)
 		{
 			var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, false);
 			if (uniqueDefines == null) {
@@ -21,14 +21,19 @@ namespace mellite {
 
 			CompilationUnitSyntax root = tree.GetCompilationUnitRoot ();
 
-			root = (CompilationUnitSyntax) root!.Accept (new AttributeConverterVisitor ())!;
+			root = (CompilationUnitSyntax) root!.Accept (new AttributeConverterVisitor (assemblyInfo))!;
 			return root!.ToFullString ();
 		}
 	}
 
 
 	class AttributeConverterVisitor : CSharpSyntaxRewriter {
-		public AttributeConverterVisitor () { }
+		AssemblyHarvestInfo? AssemblyInfo;
+
+		public AttributeConverterVisitor (AssemblyHarvestInfo? assemblyInfo)
+		{
+			AssemblyInfo = assemblyInfo;
+		}
 
 		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
@@ -48,7 +53,7 @@ namespace mellite {
 		// An example of desired behavior - https://github.com/xamarin/xamarin-macios/blob/main/src/AudioUnit/AudioComponentDescription.cs#L166
 		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, BaseTypeDeclarationSyntax? parent)
 		{
-			HarvestedMemberInfo info = AttributeHarvester.Process (member, parent);
+			HarvestedMemberInfo info = AttributeHarvester.Process (member, parent, AssemblyInfo);
 
 			var createdAttributes = new List<AttributeListSyntax> ();
 			// Some general rules for trivia in created nodes

@@ -25,10 +25,10 @@ namespace binding
 }}
 ";
 
-		public static void TestProcess (string original, ProcessSteps steps, string expected, List<string>? defines = null)
+		public static void TestProcess (string original, ProcessSteps steps, string expected, List<string>? defines = null, string? assemblyPath = null)
 		{
 			defines ??= new List<string> ();
-			string processedText = Processor.ProcessText (original, steps, defines)!;
+			string processedText = Processor.ProcessText (original, steps, defines, assemblyPath)!;
 #if true
 			Console.WriteLine (processedText);
 			Console.WriteLine (expected);

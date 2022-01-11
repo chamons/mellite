@@ -16,6 +16,7 @@ namespace mellite {
 		{
 			ActionType requestedAction = ActionType.Process;
 			string? path = null;
+			string? assemblyPath = null;
 			LocatorOptions locatorOptions = new LocatorOptions ();
 			ProcessSteps steps = ProcessSteps.ConvertXamarinAttributes;
 			List<string> defines = new List<string> ();
@@ -34,6 +35,7 @@ namespace mellite {
 				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
 				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => verboseConditional = v },
 				{ "ignore-root", "Only process files in subdirectories of the target directory, do not process root level files", _ => locatorOptions.IgnoreRoot = true },
+				{ "harvest-assembly=", "Process assembly to provide additional context for partial only classes", a => assemblyPath = a },
 			};
 
 			try {
@@ -59,7 +61,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Processor.ProcessFile (file, steps, defines, verboseConditional);
+					Processor.ProcessFile (file, steps, defines, assemblyPath, verboseConditional);
 				}
 				break;
 			}

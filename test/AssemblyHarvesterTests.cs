@@ -10,7 +10,7 @@ namespace mellite.tests {
 		{
 			const string path = "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll";
 			var info = (new AssemblyHarvester ()).Harvest (path);
-			Assert.Equal (2, info ["Speech.SFSpeechRecognitionTaskHint"].Count);
+			Assert.Equal (2, info.Data ["Speech.SFSpeechRecognitionTaskHint"].Count);
 		}
 	}
 }

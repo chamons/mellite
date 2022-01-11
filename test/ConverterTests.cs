@@ -818,5 +818,29 @@ public enum AVCaptureViewControlsStyle : long {
 	Default = Inline,
 }");
 		}
+
+		// Convert a partial class's member with the parent info defined in another assembly (outside of our scope) 
+		[Fact]
+		public void PartialInfoConversion ()
+		{
+			TestUtilities.TestProcess (@"namespace Foundation {
+	partial class NSDateComponentsFormatter {
+		[iOS (9,0)]
+		[Export (""CustomStyle"")]
+		int CustomStyle { get; set; }
+	}
+}", ProcessSteps.ConvertXamarinAttributes, @"namespace Foundation {
+	partial class NSDateComponentsFormatter {
+#if NET
+		[SupportedOSPlatform (""ios9.0"")]
+		[SupportedOSPlatform (""macos10.10"")]
+#else
+		[iOS (9,0)]
+#endif
+		[Export (""CustomStyle"")]
+		int CustomStyle { get; set; }
+	}
+}", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+		}
 	}
 }

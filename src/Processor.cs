@@ -20,7 +20,7 @@ namespace mellite {
 	};
 
 	public static class Processor {
-		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines, string? verboseConditional)
+		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines, string? assemblyPath, string? verboseConditional)
 		{
 			// Special case hack - OpenTK has some inline C++ defines in a /* */ comment block that are confusing the parser
 			// and there are literally zero defines we care about, so just early return
@@ -29,7 +29,11 @@ namespace mellite {
 			}
 
 			try {
-				var text = ProcessText (File.ReadAllText (path), steps, defines, path, verboseConditional);
+				if (assemblyPath != null) {
+					AssemblyHarvester harvester = new AssemblyHarvester ();
+					var info = harvester.Harvest (assemblyPath);
+				}
+				var text = ProcessText (File.ReadAllText (path), steps, defines, assemblyPath, path, verboseConditional);
 				if (text != null) {
 					File.WriteAllText (path, text);
 				}
@@ -39,11 +43,16 @@ namespace mellite {
 			}
 		}
 
-		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? path = null, string? verboseConditional = null)
+		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? assemblyPath, string? path = null, string? verboseConditional = null)
 		{
 			switch (steps) {
 			case ProcessSteps.ConvertXamarinAttributes:
-				return Converter.Convert (text, defines, verboseConditional);
+				AssemblyHarvestInfo? assemblyInfo = null;
+				if (assemblyPath != null) {
+					var harvester = new AssemblyHarvester ();
+					assemblyInfo = harvester.Harvest (assemblyPath);
+				}
+				return Converter.Convert (text, defines, verboseConditional, assemblyInfo);
 			case ProcessSteps.StripExistingNET6Attributes:
 				return (new AttributeStripper ()).StripText (text);
 			case ProcessSteps.StripConditionBlocks:
