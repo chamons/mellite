@@ -864,5 +864,32 @@ public struct AVCaptureViewControlsStyle {
 	}
 }", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
 		}
+
+		[Fact]
+		public void ConvertWithTVFromAssembly ()
+		{
+			TestUtilities.TestProcess (@"namespace AVFoundation {
+	public partial class AVCaptureConnection {
+		[Deprecated (PlatformName.iOS, 7, 0)]
+		public bool SupportsVideoMaxFrameDuration {
+		}
+	}
+}", ProcessSteps.ConvertXamarinAttributes, @"namespace AVFoundation {
+	public partial class AVCaptureConnection {
+#if NET
+		[SupportedOSPlatform (""maccatalyst14.0"")]
+		[UnsupportedOSPlatform (""ios7.0"")]
+#if IOS
+		[Obsolete (""Starting with ios7.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+		[UnsupportedOSPlatform (""tvos"")]
+#else
+		[Deprecated (PlatformName.iOS, 7, 0)]
+#endif
+		public bool SupportsVideoMaxFrameDuration {
+		}
+	}
+}", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+		}
 	}
 }

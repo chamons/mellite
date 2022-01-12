@@ -76,25 +76,26 @@ namespace mellite {
 				var args = attribute.ConstructorArguments;
 				var kind = attribute.AttributeType.Name.Substring (0, attribute.AttributeType.Name.Length - 9 /* len(Attribute) */);
 				var message = String.IsNullOrEmpty ((string) args.Last ().Value) ? "" : $", message: \"{(string) args.Last ().Value}\"";
+				// Since revision has a default value of -1, we have to ignore it when 'unset'
+				var revision = ((byte) args [args.Count - 2].Value) == 255 ? "" : $", args [args.Count - 2].Value";
+
 				var platform = GetPlatformName ((byte) args [0].Value);
 				if (platform == null) {
 					continue;
 				}
 				switch (args.Count) {
 				case 3:
-					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {args [1].Value}{message}"));
+					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}{revision}{message}"));
 					break;
 				case 4:
-					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {args [1].Value}, {args [2].Value}{message}]"));
+					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {args [1].Value}{revision}{message}]"));
 					break;
 				case 5: {
-					string minor = GetMinorValue (args [3].Value) != 255 ? $", {args [3].Value}" : "";
-					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {args [1].Value}, {args [2].Value}{minor}{message}"));
+					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {args [1].Value}, {args [2].Value}{revision}{message}"));
 					break;
 				}
 				case 6: {
-					string minor = GetMinorValue (args [3].Value) != 255 ? $", {args [3].Value}" : "";
-					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {platform}, {args [1].Value}, {args [2].Value}{minor}, {args [4].Value}{message}]"));
+					availability.Add (new HarvestedAvailabilityInfo (kind, $"{platform}, {platform}, {args [1].Value}, {args [2].Value}, {args [3].Value}{revision}{message}]"));
 					break;
 				}
 				default:
