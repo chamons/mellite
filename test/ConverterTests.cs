@@ -891,5 +891,24 @@ public struct AVCaptureViewControlsStyle {
 	}
 }", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
 		}
+
+		[Fact]
+		public void ConvertWithSomeAttributesDefinedOff ()
+		{
+			Assert.Throws<InvalidOperationException> (() =>
+			 TestUtilities.TestProcess (@"namespace AVFoundation {
+#if XAMCORE_3_0
+	[NoiOS]
+	[NoWatch]
+#endif
+	[Unavailable (PlatformName.MacCatalyst)]
+	[NoTV]
+	[Native]
+	// NSInteger - AVCaptureDevice.h
+	public enum AVCaptureDeviceTransportControlsPlaybackMode : long {
+		NotPlaying, Playing
+	}
+}", ProcessSteps.ConvertXamarinAttributes, @"", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll"));
+		}
 	}
 }

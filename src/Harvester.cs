@@ -85,11 +85,14 @@ namespace mellite {
 			SyntaxTriviaList? nonWhitespaceTrivia = null;
 			SyntaxTriviaList? newlineTrivia = null;
 			SyntaxTriviaList? indentTrivia = null;
+
+			bool processingFirst = true;
 			foreach (var attributeList in member.AttributeLists) {
 				if (newlineTrivia == null) {
 					(nonWhitespaceTrivia, newlineTrivia, indentTrivia) = SplitNodeTrivia (attributeList);
 				}
 
+				bool anyAvailabilityFound = false;
 				foreach (var attribute in attributeList.Attributes) {
 					switch (attribute.Name.ToString ()) {
 					case "Mac":
@@ -99,11 +102,13 @@ namespace mellite {
 					case "Introduced": {
 						AddIfSupportedPlatform (attribute, introducedAttributesToProcess);
 						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						anyAvailabilityFound = true;
 						break;
 					}
 					case "Deprecated": {
 						AddIfSupportedPlatform (attribute, deprecatedAttributesToProcess);
 						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						anyAvailabilityFound = true;
 						break;
 					}
 					case "NoMac":
@@ -113,11 +118,13 @@ namespace mellite {
 					case "Unavailable": {
 						AddIfSupportedPlatform (attribute, unavailableAttributesToProcess);
 						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						anyAvailabilityFound = true;
 						break;
 					}
 					case "Obsoleted": {
 						AddIfSupportedPlatform (attribute, obsoleteAttributesToProcess);
 						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						anyAvailabilityFound = true;
 						break;
 					}
 					case "NoWatch":
@@ -130,6 +137,24 @@ namespace mellite {
 						break;
 					}
 				}
+
+				// Detect case where we have availability attributes with #if blocks around just some of them
+				// General case is very complex, but simplification of "look for #endif after first attribute 
+				// until you hit item being decorated 
+				if (anyAvailabilityFound) {
+					List<string> trivia;
+					if (processingFirst) {
+						trivia = new List<string> () { attributeList.GetTrailingTrivia ().ToFullString () };
+					} else {
+						trivia = new List<string> () { attributeList.GetLeadingTrivia ().ToFullString (), attributeList.GetTrailingTrivia ().ToFullString () };
+					}
+
+					if (trivia.Any (t => t.Contains ("#endif"))) {
+						throw new InvalidOperationException ($"{attributeList} contains conditions that will not be parsed correctly");
+					}
+				}
+
+				processingFirst = false;
 			}
 
 			// If we define any availability attributes on a member and have a parent, we must copy
