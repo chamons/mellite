@@ -21,6 +21,7 @@ namespace mellite {
 			ProcessSteps steps = ProcessSteps.ConvertXamarinAttributes;
 			List<string> defines = new List<string> ();
 			string? verboseConditional = null;
+			bool allowErrors = false;
 
 			OptionSet os = new OptionSet ()
 			{
@@ -36,6 +37,7 @@ namespace mellite {
 				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => verboseConditional = v },
 				{ "ignore-root", "Only process files in subdirectories of the target directory, do not process root level files", _ => locatorOptions.IgnoreRoot = true },
 				{ "harvest-assembly=", "Process assembly to provide additional context for partial only classes", a => assemblyPath = a },
+				{ "allow-errors", "Instead of crashing on first fatal error, just print and continue.", a => allowErrors = true },
 			};
 
 			try {
@@ -61,7 +63,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Processor.ProcessFile (file, steps, defines, assemblyPath, verboseConditional);
+					Processor.ProcessFile (file, steps, defines, assemblyPath, verboseConditional, allowErrors);
 				}
 				break;
 			}

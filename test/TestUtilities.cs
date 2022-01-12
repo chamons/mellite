@@ -28,7 +28,7 @@ namespace binding
 		public static void TestProcess (string original, ProcessSteps steps, string expected, List<string>? defines = null, string? assemblyPath = null)
 		{
 			defines ??= new List<string> ();
-			string processedText = Processor.ProcessText (original, steps, defines, assemblyPath)!;
+			string processedText = Processor.ProcessText (original, steps, defines, assemblyPath, false)!;
 #if true
 			Console.WriteLine (processedText);
 			Console.WriteLine (expected);

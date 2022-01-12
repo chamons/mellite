@@ -20,7 +20,7 @@ namespace mellite {
 	};
 
 	public static class Processor {
-		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines, string? assemblyPath, string? verboseConditional)
+		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines, string? assemblyPath, string? verboseConditional, bool allowErrors)
 		{
 			// Special case hack - OpenTK has some inline C++ defines in a /* */ comment block that are confusing the parser
 			// and there are literally zero defines we care about, so just early return
@@ -33,7 +33,7 @@ namespace mellite {
 					AssemblyHarvester harvester = new AssemblyHarvester ();
 					var info = harvester.Harvest (assemblyPath);
 				}
-				var text = ProcessText (File.ReadAllText (path), steps, defines, assemblyPath, path, verboseConditional);
+				var text = ProcessText (File.ReadAllText (path), steps, defines, assemblyPath, allowErrors, path, verboseConditional);
 				if (text != null) {
 					File.WriteAllText (path, text);
 				}
@@ -43,43 +43,51 @@ namespace mellite {
 			}
 		}
 
-		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? assemblyPath, string? path = null, string? verboseConditional = null)
+		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? assemblyPath, bool allowErrors, string? path = null, string? verboseConditional = null)
 		{
-			switch (steps) {
-			case ProcessSteps.ConvertXamarinAttributes:
-				AssemblyHarvestInfo? assemblyInfo = null;
-				if (assemblyPath != null) {
-					var harvester = new AssemblyHarvester ();
-					assemblyInfo = harvester.Harvest (assemblyPath);
-				}
-				return Converter.Convert (text, defines, verboseConditional, assemblyInfo);
-			case ProcessSteps.StripExistingNET6Attributes:
-				return (new AttributeStripper ()).StripText (text);
-			case ProcessSteps.StripConditionBlocks:
-				return (new ConditionBlockStripper ()).StripText (text);
-			case ProcessSteps.StripVerify:
-				return (new VerifyStripper ()).StripText (text, verboseConditional);
-			case ProcessSteps.ListDefinesDetected: {
-				var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
-				Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
-
-				var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
-				Console.WriteLine ();
-				Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
-				return null;
-			}
-			case ProcessSteps.ListDefineUnresolvableFiles: {
-				if ((new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
-					Console.WriteLine ($"Could not process: {path}");
+			try {
+				switch (steps) {
+				case ProcessSteps.ConvertXamarinAttributes:
+					AssemblyHarvestInfo? assemblyInfo = null;
+					if (assemblyPath != null) {
+						var harvester = new AssemblyHarvester ();
+						assemblyInfo = harvester.Harvest (assemblyPath);
+					}
+					return Converter.Convert (text, defines, verboseConditional, assemblyInfo);
+				case ProcessSteps.StripExistingNET6Attributes:
+					return (new AttributeStripper ()).StripText (text);
+				case ProcessSteps.StripConditionBlocks:
+					return (new ConditionBlockStripper ()).StripText (text);
+				case ProcessSteps.StripVerify:
+					return (new VerifyStripper ()).StripText (text, verboseConditional);
+				case ProcessSteps.ListDefinesDetected: {
 					var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
 					Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
-				}
-				return null;
-			}
-			default:
-				return null;
-			}
 
+					var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
+					Console.WriteLine ();
+					Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
+					return null;
+				}
+				case ProcessSteps.ListDefineUnresolvableFiles: {
+					if ((new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
+						Console.WriteLine ($"Could not process: {path}");
+						var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
+						Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
+					}
+					return null;
+				}
+				default:
+					return null;
+				}
+			} catch (Exception e) {
+				if (allowErrors) {
+					Console.Error.WriteLine ($"While processing '{(String.IsNullOrEmpty (path) ? "unknown" : path)}' we hit exception: '{e}'");
+					return null;
+				} else {
+					throw;
+				}
+			}
 		}
 	}
 }
