@@ -325,6 +325,10 @@ namespace mellite {
 					// Skip 11 - sizeof("message : \"") and last "
 					message = " " + lastArg [11..^1];
 				}
+				// Make the first non-space lower case
+				if (!String.IsNullOrEmpty (message)) {
+					message = " " + char.ToLower (message [1]) + message.Substring (2);
+				}
 			}
 
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
