@@ -169,7 +169,8 @@ namespace mellite {
 					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
 
 				if (assemblyInfo != null) {
-					string fullName = ((NamespaceDeclarationSyntax) parent.Parent!).Name.ToString () + "." + parent.Identifier.ToString ();
+					string fullName = GetFullName (parent);
+
 					if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
 						HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
 						CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
@@ -233,6 +234,30 @@ namespace mellite {
 			}
 
 			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null);
+		}
+
+		static string GetFullName (BaseTypeDeclarationSyntax parent)
+		{
+			string name = parent.Identifier.ToString ();
+
+			SyntaxNode? current = parent.Parent;
+			while (current != null) {
+				switch (current) {
+				case NamespaceDeclarationSyntax space:
+					name = space.Name + "." + name;
+					break;
+				case ClassDeclarationSyntax klass:
+					name = klass.Identifier.ToString () + "." + name;
+					break;
+				case StructDeclarationSyntax str:
+					name = str.Identifier.ToString () + "." + name;
+					break;
+				default:
+					throw new NotImplementedException ();
+				}
+				current = current.Parent as BaseTypeDeclarationSyntax;
+			}
+			return name;
 		}
 
 		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source, List<string> fullyUnavailablePlatforms)
