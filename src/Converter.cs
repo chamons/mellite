@@ -38,8 +38,27 @@ namespace mellite {
 		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
 		public override SyntaxNode? VisitEventDeclaration (EventDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitEnumDeclaration (EnumDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitStructDeclaration (StructDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
+		public override SyntaxNode? VisitEnumMemberDeclaration (EnumMemberDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
+
+		public override SyntaxNode? VisitEnumDeclaration (EnumDeclarationSyntax node)
+		{
+			// Need to first call base so properties/methods are visited
+			var processedNode = (EnumDeclarationSyntax?) base.VisitEnumDeclaration (node);
+			if (processedNode != null) {
+				return Apply (processedNode, null);
+			}
+			return null;
+		}
+
+		public override SyntaxNode? VisitStructDeclaration (StructDeclarationSyntax node)
+		{
+			// Need to first call base so properties/methods are visited
+			var processedNode = (StructDeclarationSyntax?) base.VisitStructDeclaration (node);
+			if (processedNode != null) {
+				return Apply (processedNode, null);
+			}
+			return null;
+		}
 
 		public override SyntaxNode? VisitClassDeclaration (ClassDeclarationSyntax node)
 		{

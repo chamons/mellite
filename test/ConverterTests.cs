@@ -820,6 +820,24 @@ public enum AVCaptureViewControlsStyle : long {
 		}
 
 		[Fact]
+		public void EnumElementConvert ()
+		{
+			TestConversion (@"public enum InitMode {
+	WithConnection,
+	[iOS (8,0)]
+	WithNoConnection,
+}", @"public enum InitMode {
+	WithConnection,
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+#else
+	[iOS (8,0)]
+#endif
+	WithNoConnection,
+}");
+		}
+
+		[Fact]
 		public void StructConvert ()
 		{
 			TestConversion (@"[Mac (10,10)]
