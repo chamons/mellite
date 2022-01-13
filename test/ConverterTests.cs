@@ -953,5 +953,24 @@ public struct AVCaptureViewControlsStyle {
 		public class ExternalChangeEventArgs : EventArgs {}
 ");
 		}
+
+		[Fact]
+		public void CtorAttributes ()
+		{
+			TestConversion (@"public class ABAddressBook : NativeObject, IEnumerable<ABRecord> {
+			[Deprecated (PlatformName.iOS, 6, 0, message : ""Use the static Create method instead"")]
+			public ABAddressBook () {}
+}", @"public class ABAddressBook : NativeObject, IEnumerable<ABRecord> {
+#if NET
+			[UnsupportedOSPlatform (""ios6.0"")]
+#if IOS
+			[Obsolete (""Starting with ios6.0 Use the static Create method instead"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+			[Deprecated (PlatformName.iOS, 6, 0, message : ""Use the static Create method instead"")]
+#endif
+			public ABAddressBook () {}
+}");
+		}
 	}
 }
