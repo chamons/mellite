@@ -49,7 +49,7 @@
             "args": [
                 "test",
                 "${workspaceFolder}/test/mellite.tests.csproj",
-                "--filter=EnumElementConvert",
+                "--filter=DeprecatedWithMessage",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
             ],
