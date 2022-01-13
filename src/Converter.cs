@@ -320,9 +320,9 @@ namespace mellite {
 				// Skip 10 - sizeof("message: \"") and last "
 				if (lastArg.StartsWith ("message:")) {
 					message = " " + lastArg [10..^1];
-				} else if (lastArg.StartsWith ("message:")) {
+				} else if (lastArg.StartsWith ("message :")) {
 					// Skip 11 - sizeof("message : \"") and last "
-					message = " " + lastArg [10..^1];
+					message = " " + lastArg [11..^1];
 				}
 			}
 
