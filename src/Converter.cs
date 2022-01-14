@@ -328,6 +328,10 @@ namespace mellite {
 				// Make the first non-space lower case
 				if (!String.IsNullOrEmpty (message)) {
 					message = " " + char.ToLower (message [1]) + message.Substring (2);
+					// If we don't end with period, add one for AttributeTypoTest
+					if (!message.TrimEnd ().EndsWith (".")) {
+						message = message + ".";
+					}
 				}
 			}
 
