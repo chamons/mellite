@@ -31,6 +31,7 @@ namespace binding
 			string processedText = Processor.ProcessText (original, steps, defines, assemblyPath, false)!;
 #if true
 			Console.WriteLine (processedText);
+			Console.WriteLine ();
 			Console.WriteLine (expected);
 #endif
 			Assert.Equal (expected, processedText, ignoreLineEndingDifferences: true);

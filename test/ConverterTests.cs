@@ -972,5 +972,50 @@ public struct AVCaptureViewControlsStyle {
 			public ABAddressBook () {}
 }");
 		}
+
+		[Fact]
+		public void ABPersonCorrectDeprecation ()
+		{
+			TestUtilities.TestProcess (@"namespace AddressBook {
+[Deprecated (PlatformName.iOS, 9, 0, message : ""Use the 'Contacts' API instead."")]
+[Introduced (PlatformName.MacCatalyst, 14, 0)]
+[Deprecated (PlatformName.MacCatalyst, 14, 0, message : ""Use the 'Contacts' API instead."")]
+public class ABPerson {
+   [iOS (7,0)]
+   public static ABPersonCompositeNameFormat GetCompositeNameFormat (ABRecord? record) {}
+}
+}", ProcessSteps.ConvertXamarinAttributes, @"namespace AddressBook {
+#if NET
+[SupportedOSPlatform (""maccatalyst14.0"")]
+[UnsupportedOSPlatform (""maccatalyst14.0"")]
+[UnsupportedOSPlatform (""ios9.0"")]
+#if __MACCATALYST__
+[Obsolete (""Starting with maccatalyst14.0 use the 'Contacts' API instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+[Obsolete (""Starting with ios9.0 use the 'Contacts' API instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+[Deprecated (PlatformName.iOS, 9, 0, message : ""Use the 'Contacts' API instead."")]
+[Introduced (PlatformName.MacCatalyst, 14, 0)]
+[Deprecated (PlatformName.MacCatalyst, 14, 0, message : ""Use the 'Contacts' API instead."")]
+#endif
+public class ABPerson {
+#if NET
+   [SupportedOSPlatform (""ios7.0"")]
+   [SupportedOSPlatform (""maccatalyst14.0"")]
+   [UnsupportedOSPlatform (""maccatalyst14.0"")]
+   [UnsupportedOSPlatform (""ios9.0"")]
+#if __MACCATALYST__
+   [Obsolete (""Starting with maccatalyst14.0 use the 'Contacts' API instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+   [Obsolete (""Starting with ios9.0 use the 'Contacts' API instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+   [iOS (7,0)]
+#endif
+   public static ABPersonCompositeNameFormat GetCompositeNameFormat (ABRecord? record) {}
+}
+}", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+		}
 	}
 }

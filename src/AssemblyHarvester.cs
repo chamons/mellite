@@ -77,7 +77,7 @@ namespace mellite {
 				var kind = attribute.AttributeType.Name.Substring (0, attribute.AttributeType.Name.Length - 9 /* len(Attribute) */);
 				var message = String.IsNullOrEmpty ((string) args.Last ().Value) ? "" : $", message: \"{(string) args.Last ().Value}\"";
 				// Since revision has a default value of -1, we have to ignore it when 'unset'
-				var revision = ((byte) args [args.Count - 2].Value) == 255 ? "" : $", args [args.Count - 2].Value";
+				var revision = ((byte) args [args.Count - 2].Value) == 255 ? "" : $", {args [args.Count - 2].Value}";
 
 				var platform = GetPlatformName ((byte) args [0].Value);
 				if (platform == null) {

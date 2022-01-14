@@ -111,6 +111,7 @@ namespace mellite {
 				return $"{node.ArgumentList!.Arguments [0]}.{node.ArgumentList!.Arguments [1]}";
 			case 3: // Introduced (Platform, Major, Minor)
 			case 4: // Introduced (Platform, Major, Minor, Message)
+			case 5: // Introduced (Platform, Major, Minor, Point, Message) - Ignore Point
 				return $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
 			default:
 				return "";
