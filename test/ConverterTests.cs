@@ -94,15 +94,15 @@ namespace mellite.tests {
 		{
 			TestMethodAttributeConversion ("[Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform (""ios11.0"")]
 #if IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif");
 
 			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)]", @"[UnsupportedOSPlatform (""macos11.0"")]
         [UnsupportedOSPlatform (""ios11.0"")]
 #if MONOMAC
-        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]");
 
@@ -112,13 +112,13 @@ namespace mellite.tests {
         [UnsupportedOSPlatform (""tvos11.0"")]
         [UnsupportedOSPlatform (""ios11.0"")]
 #if MONOMAC
-        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif __MACCATALYST__
-        [Obsolete (""Starting with maccatalyst11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with maccatalyst11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
-        [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with tvos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.MacCatalyst, 11, 0)]
@@ -128,9 +128,9 @@ namespace mellite.tests {
 			TestMethodAttributeConversion ("[Deprecated (PlatformName.MacOSX, 11, 0)][Deprecated (PlatformName.iOS, 11, 0)][Deprecated (PlatformName.WatchOS, 11, 0)]", @"[UnsupportedOSPlatform (""macos11.0"")]
         [UnsupportedOSPlatform (""ios11.0"")]
 #if MONOMAC
-        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", xamarinAttributeAfterConvert: @"[Deprecated (PlatformName.MacOSX, 11, 0)]
         [Deprecated (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.WatchOS, 11, 0)]");
@@ -140,24 +140,24 @@ namespace mellite.tests {
 		public void Obsolete ()
 		{
 			TestMethodAttributeConversion ("[Obsoleted (PlatformName.iOS, 11, 0)]", @"#if IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
 			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
         [Obsoleted (PlatformName.MacOSX, 11, 0)]", @"#if MONOMAC
-        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
 			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
         [Obsoleted (PlatformName.MacOSX, 11, 0)]
         [Obsoleted (PlatformName.TvOS, 11, 0)]", @"#if MONOMAC
-        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif TVOS
-        [Obsolete (""Starting with tvos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with tvos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 		}
 
@@ -204,18 +204,18 @@ namespace mellite.tests {
 		{
 			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
         [Obsoleted (PlatformName.MacCatalyst)]", @"#if __MACCATALYST__
-        [Obsolete (""Starting with maccatalyst"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with maccatalyst."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif", newAttributeSpaceCount: 0);
 
 			TestMethodAttributeConversion (@"[Obsoleted (PlatformName.iOS, 11, 0)]
         [Deprecated (PlatformName.MacCatalyst)]", @"[UnsupportedOSPlatform (""maccatalyst"")]
 #if __MACCATALYST__
-        [Obsolete (""Starting with maccatalyst"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with maccatalyst."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif
 #if IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif");
 		}
 
@@ -254,11 +254,11 @@ namespace binding
         [Unavailable (PlatformName.MacCatalyst)]", @"[SupportedOSPlatform (""macos10.0"")]
         [UnsupportedOSPlatform (""macos11.0"")]
 #if MONOMAC
-        [Obsolete (""Starting with macos11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with macos11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif
         [UnsupportedOSPlatform (""maccatalyst"")]
 #if IOS
-        [Obsolete (""Starting with ios11.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+        [Obsolete (""Starting with ios11.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif");
 
 			TestMethodAttributeConversion (@"[Mac (11, 0)]
@@ -669,13 +669,13 @@ namespace binding
 	[UnsupportedOSPlatform (""maccatalyst15.0"")]
 	[UnsupportedOSPlatform (""ios15.0"")]
 #if TVOS
-	[Obsolete (""Starting with tvos15.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+	[Obsolete (""Starting with tvos15.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif MONOMAC
-	[Obsolete (""Starting with macos12.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+	[Obsolete (""Starting with macos12.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif __MACCATALYST__
-	[Obsolete (""Starting with maccatalyst15.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+	[Obsolete (""Starting with maccatalyst15.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #elif IOS
-	[Obsolete (""Starting with ios15.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+	[Obsolete (""Starting with ios15.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif
 #else
 	[Deprecated (PlatformName.TvOS, 15,0, PlatformArchitecture.All)]
@@ -898,7 +898,7 @@ public struct AVCaptureViewControlsStyle {
 		[SupportedOSPlatform (""maccatalyst14.0"")]
 		[UnsupportedOSPlatform (""ios7.0"")]
 #if IOS
-		[Obsolete (""Starting with ios7.0"", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+		[Obsolete (""Starting with ios7.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
 #endif
 		[UnsupportedOSPlatform (""tvos"")]
 #else
@@ -1016,6 +1016,29 @@ public class ABPerson {
    public static ABPersonCompositeNameFormat GetCompositeNameFormat (ABRecord? record) {}
 }
 }", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+		}
+
+		[Fact]
+		public void ABMultiValueExample ()
+		{
+			TestConversion (@"[Deprecated (PlatformName.iOS, 9,0)]
+	[Introduced (PlatformName.MacCatalyst, 14, 0)]
+	[Deprecated (PlatformName.MacCatalyst, 14, 0, message : ""Use the 'Contacts' API instead."")]
+	static class ABMultiValue {}", @"#if NET
+[SupportedOSPlatform (""maccatalyst14.0"")]
+[UnsupportedOSPlatform (""maccatalyst14.0"")]
+[UnsupportedOSPlatform (""ios9.0"")]
+#if __MACCATALYST__
+[Obsolete (""Starting with maccatalyst14.0 use the 'Contacts' API instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#elif IOS
+[Obsolete (""Starting with ios9.0."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+[Deprecated (PlatformName.iOS, 9,0)]
+[Introduced (PlatformName.MacCatalyst, 14, 0)]
+[Deprecated (PlatformName.MacCatalyst, 14, 0, message : ""Use the 'Contacts' API instead."")]
+#endif
+	static class ABMultiValue {}");
 		}
 	}
 }

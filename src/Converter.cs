@@ -328,14 +328,11 @@ namespace mellite {
 				// Make the first non-space lower case
 				if (!String.IsNullOrEmpty (message)) {
 					message = " " + char.ToLower (message [1]) + message.Substring (2);
-					// If we don't end with period, add one for AttributeTypoTest
-					if (!message.TrimEnd ().EndsWith (".")) {
-						message = message + ".";
-					}
 				}
 			}
 
-			var args = SyntaxFactory.ParseAttributeArgumentList ($"(\"Starting with {platform}{version}{message}\", DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
+			var messageArgs = $"\"Starting with {platform}{version}{message}{(message.EndsWith (".") ? "" : ".")}\"";
+			var args = SyntaxFactory.ParseAttributeArgumentList ($"({messageArgs}, DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
 			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
 		}
 	}
