@@ -1,3 +1,6 @@
+using System.Linq;
+using System.Text;
+
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace mellite {
@@ -106,16 +109,39 @@ namespace mellite {
 
 		public static string GetVersionFromNode (AttributeSyntax node)
 		{
-			switch (node.ArgumentList?.Arguments.Count) {
-			case 2: // iOS (Major, Minor)
-				return $"{node.ArgumentList!.Arguments [0]}.{node.ArgumentList!.Arguments [1]}";
-			case 3: // Introduced (Platform, Major, Minor)
-			case 4: // Introduced (Platform, Major, Minor, Message)
-			case 5: // Introduced (Platform, Major, Minor, Point, Message) - Ignore Point
-				return $"{node.ArgumentList!.Arguments [1]}.{node.ArgumentList!.Arguments [2]}";
-			default:
+			if (node.ArgumentList == null) {
 				return "";
 			}
+			// Look at every argument type
+			// Introduced (Platform, Major, Minor, Point, Message) is the full attribute, but it could also be
+			// (Platform, Major, Minor, Message) or (Platform, Major, Minor, Point), etc.
+			var version = new StringBuilder ();
+			int count = 0;
+			foreach (var arg in node.ArgumentList!.Arguments.Select (s => s.ToString ())) {
+				if (int.TryParse (arg, out var bit)) {
+					count += 1;
+					switch (count) {
+					case 1:
+						// On the first one don't appent a period
+						version.Append (arg);
+						break;
+					case 3:
+						// If we have a point, ignore it if set to 0
+						// We do this as the assembly harvester will read
+						// every single attribute as set to 0
+						if (bit != 0) {
+							version.Append (".");
+							version.Append (arg);
+						}
+						break;
+					default:
+						version.Append (".");
+						version.Append (arg);
+						break;
+					}
+				}
+			}
+			return version.ToString ();
 		}
 	}
 }

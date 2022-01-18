@@ -1040,5 +1040,38 @@ public class ABPerson {
 #endif
 	static class ABMultiValue {}");
 		}
+
+		[Fact]
+		public void EnumWithThreeVersionBits ()
+		{
+			TestConversion (@"namespace Foundation {
+	[NoMacCatalyst]
+	[Mac (10,12,2)]
+	[Native]
+	public enum NSScrubberAlignment : long
+	{
+		None = 0,
+		Leading,
+		Trailing,
+		Center
+	}
+}", @"namespace Foundation {
+#if NET
+	[SupportedOSPlatform (""macos10.12.2"")]
+	[UnsupportedOSPlatform (""maccatalyst"")]
+#else
+	[NoMacCatalyst]
+	[Mac (10,12,2)]
+#endif
+	[Native]
+	public enum NSScrubberAlignment : long
+	{
+		None = 0,
+		Leading,
+		Trailing,
+		Center
+	}
+}");
+		}
 	}
 }
