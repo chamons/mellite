@@ -1073,5 +1073,24 @@ public class ABPerson {
 	}
 }");
 		}
+
+
+		[Fact]
+		public void InterfaceConvert ()
+		{
+			TestConversion (@"namespace AppKit
+{
+	[Mac (10,10)] // protocol added in 10.10
+	public partial interface INSAccessibility {}
+}", @"namespace AppKit
+{
+#if NET
+	[SupportedOSPlatform (""macos10.10"")]
+#else
+	[Mac (10,10)] // protocol added in 10.10
+#endif
+	public partial interface INSAccessibility {}
+}");
+		}
 	}
 }
