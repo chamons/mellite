@@ -1092,5 +1092,28 @@ public class ABPerson {
 	public partial interface INSAccessibility {}
 }");
 		}
+
+		[Fact]
+		public void StructStatic ()
+		{
+			TestConversion (@"[StructLayout (LayoutKind.Sequential)]
+	public struct AudioStreamBasicDescription {
+		[Deprecated (PlatformName.MacOSX, 10, 10, message : ""Canonical is no longer encouraged, since fixed-point no longer provides a performance advantage over floating point. 'AudioFormatFlagsNativeFloatPacked' is preffered instead."")]
+		public static readonly AudioFormatFlags AudioFormatFlagsAudioUnitCanonical = AudioFormatFlags.IsSignedInteger | (BitConverter.IsLittleEndian ? 0 : AudioFormatFlags.IsBigEndian) |
+			AudioFormatFlags.IsPacked | AudioFormatFlags.IsNonInterleaved | (AudioFormatFlags) (AudioUnitSampleFractionBits << (int)AudioFormatFlags.LinearPCMSampleFractionShift);
+}", @"[StructLayout (LayoutKind.Sequential)]
+	public struct AudioStreamBasicDescription {
+#if NET
+		[UnsupportedOSPlatform (""macos10.10"")]
+#if MONOMAC
+		[Obsolete (""Starting with macos10.10 canonical is no longer encouraged, since fixed-point no longer provides a performance advantage over floating point. 'AudioFormatFlagsNativeFloatPacked' is preffered instead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+		[Deprecated (PlatformName.MacOSX, 10, 10, message : ""Canonical is no longer encouraged, since fixed-point no longer provides a performance advantage over floating point. 'AudioFormatFlagsNativeFloatPacked' is preffered instead."")]
+#endif
+		public static readonly AudioFormatFlags AudioFormatFlagsAudioUnitCanonical = AudioFormatFlags.IsSignedInteger | (BitConverter.IsLittleEndian ? 0 : AudioFormatFlags.IsBigEndian) |
+			AudioFormatFlags.IsPacked | AudioFormatFlags.IsNonInterleaved | (AudioFormatFlags) (AudioUnitSampleFractionBits << (int)AudioFormatFlags.LinearPCMSampleFractionShift);
+}");
+		}
 	}
 }
