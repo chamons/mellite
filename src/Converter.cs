@@ -318,23 +318,37 @@ namespace mellite {
 			var platform = PlatformArgumentParser.GetPlatformFromNode (node);
 			var version = PlatformArgumentParser.GetVersionFromNode (node);
 
+			string messageLeader = "";
 			string message = "";
 			if (node.ArgumentList?.Arguments.Count > 3) {
 				var lastArg = node.ArgumentList!.Arguments.Last ().ToString ();
-				// Skip 10 - sizeof("message: \"") and last "
-				if (lastArg.StartsWith ("message:")) {
-					message = " " + lastArg [10..^1];
-				} else if (lastArg.StartsWith ("message :")) {
-					// Skip 11 - sizeof("message : \"") and last "
-					message = " " + lastArg [11..^1];
-				}
-				// Make the first non-space lower case
-				if (!String.IsNullOrEmpty (message)) {
-					message = " " + char.ToLower (message [1]) + message.Substring (2);
+				if (lastArg.EndsWith ("\"")) {
+					// Most messages are quoted strings
+					if (lastArg.StartsWith ("message:")) {
+						// Skip 10 - sizeof("message: \"") and last "
+						message = " " + lastArg [10..^1];
+					} else if (lastArg.StartsWith ("message :")) {
+						// Skip 11 - sizeof("message : \"") and last "
+						message = " " + lastArg [11..^1];
+					}
+					// Make the first non-space lower case
+					if (!String.IsNullOrEmpty (message)) {
+						message = " " + char.ToLower (message [1]) + message.Substring (2);
+					}
+				} else {
+					// But some rare ones are constant variables
+					if (lastArg.StartsWith ("message:")) {
+						// Skip 10 - sizeof(message: ")
+						message = " " + lastArg [9..];
+					} else if (lastArg.StartsWith ("message :")) {
+						// Skip 11 - sizeof(message : ")
+						message = " " + lastArg [10..];
+					}
+					messageLeader = "[Verify (\"Constants in descriptions are not\")]";
 				}
 			}
 
-			var messageArgs = $"\"Starting with {platform}{version}{message}{(message.EndsWith (".") ? "" : ".")}\"";
+			var messageArgs = $"{messageLeader}\"Starting with {platform}{version}{message}{(message.EndsWith (".") ? "" : ".")}\"";
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"({messageArgs}, DiagnosticId = \"BI1234\", UrlFormat = \"https://github.com/xamarin/xamarin-macios/wiki/Obsolete\")");
 			return SyntaxFactory.Attribute (SyntaxFactory.ParseName ("Obsolete"), args);
 		}

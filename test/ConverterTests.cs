@@ -1115,5 +1115,28 @@ public class ABPerson {
 			AudioFormatFlags.IsPacked | AudioFormatFlags.IsNonInterleaved | (AudioFormatFlags) (AudioUnitSampleFractionBits << (int)AudioFormatFlags.LinearPCMSampleFractionShift);
 }");
 		}
+
+		[Fact]
+		public void DeprecatedWithVariableMessage ()
+		{
+			TestConversion (@"static class Constants {
+				public static string UseNetworkInstead = ""Use Network Instead"";
+			}
+
+			[Deprecated (PlatformName.MacOSX, 12, 0, message: Constants.UseNetworkInstead)]
+			class CFHost {}", @"static class Constants {
+				public static string UseNetworkInstead = ""Use Network Instead"";
+			}
+
+#if NET
+			[UnsupportedOSPlatform (""macos12.0"")]
+#if MONOMAC
+			[Obsolete ([Verify (""Constants in descriptions are not"")]""Starting with macos12.0 Constants.UseNetworkInstead."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
+#endif
+#else
+			[Deprecated (PlatformName.MacOSX, 12, 0, message: Constants.UseNetworkInstead)]
+#endif
+			class CFHost {}");
+		}
 	}
 }
