@@ -97,6 +97,7 @@ namespace mellite {
 						Conditionals.Push (s.Split ("#if") [1].Trim ());
 					} else if (CurrentConditional != null) {
 						Chunk.Append (s);
+						Chunk.Append (Environment.NewLine);
 					}
 					break;
 				}

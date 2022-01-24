@@ -1153,5 +1153,43 @@ public class ABPerson {
 	public delegate nint CMBufferGetSize (INativeObject buffer);
 ");
 		}
+
+		[Fact]
+		public void LaunchExample ()
+		{
+			TestConversion (@"#if MONOMAC
+namespace CoreServices
+{
+public static class LaunchServices
+{
+		#region Locating an Application
+
+		[Mac (10, 10)]
+		[DllImport (Constants.CoreServicesLibrary)]
+		static extern IntPtr LSCopyDefaultApplicationURLForURL (IntPtr inUrl, LSRoles inRole, /*out*/ IntPtr outError);
+
+		#endregion
+}
+#endif
+", @"#if MONOMAC
+namespace CoreServices
+{
+public static class LaunchServices
+{
+		#region Locating an Application
+
+#if NET
+		[SupportedOSPlatform (""macos10.10"")]
+#else
+		[Mac (10, 10)]
+#endif
+		[DllImport (Constants.CoreServicesLibrary)]
+		static extern IntPtr LSCopyDefaultApplicationURLForURL (IntPtr inUrl, LSRoles inRole, /*out*/ IntPtr outError);
+
+		#endregion
+}
+#endif
+");
+		}
 	}
 }
