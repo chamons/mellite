@@ -1138,5 +1138,20 @@ public class ABPerson {
 #endif
 			class CFHost {}");
 		}
+
+		[Fact]
+		public void DelegateDef ()
+		{
+			TestConversion (@"[iOS (7,1), Watch (6,0)]
+	public delegate nint CMBufferGetSize (INativeObject buffer);
+", @"#if NET
+[SupportedOSPlatform (""ios7.1"")]
+#else
+[iOS (7,1)]
+[Watch (6,0)]
+#endif
+	public delegate nint CMBufferGetSize (INativeObject buffer);
+");
+		}
 	}
 }
