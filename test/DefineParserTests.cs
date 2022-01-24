@@ -185,35 +185,6 @@ namespace mellite.tests {
 		}
 
 		[Fact]
-		public void ObsoleteOnlyBlockingIfNet6Arged ()
-		{
-			// This Obsolete should be ignored as it doesn't use any NET6 specific bits
-			ParseAndExpect (@"namespace AppKit {
-	[BaseType (typeof (NSObject))]
-	interface NSApplicationDelegate {
-#if !__IOS__
-		[Obsolete (""Use 'State' instead."")]
-		SKDownloadState DownloadState { get; }
-#else
-		[NoWatch]
-		SKDownloadState DownloadState { get; 
-#endif
-		}
-	}", new List<string> () { "__IOS__" }, new List<string> () { "__IOS__" });
-
-			// This Obsolete should _not_ be ignored as does use NET6 specific bits
-			ParseAndExpect (@"namespace AppKit {
-	[BaseType (typeof (NSObject))]
-	interface NSApplicationDelegate {
-#if !__IOS__
-		[Obsolete (""This API is not available on this platform."", DiagnosticId = ""BI1234"", UrlFormat = ""https://github.com/xamarin/xamarin-macios/wiki/Obsolete"")]
-		SKDownloadState DownloadState { get; }
-#endif
-		}
-	}", new List<string> () { "!__IOS__" }, new List<string> () { });
-		}
-
-		[Fact]
 		public void SplitPartsTest ()
 		{
 			Assert.Equal (new [] { "A" }, DefineParser.SplitConditionalParts ("A"));
