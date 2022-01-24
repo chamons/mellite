@@ -340,11 +340,12 @@ namespace mellite {
 					if (lastArg.StartsWith ("message:")) {
 						// Skip 10 - sizeof(message: ")
 						message = " " + lastArg [9..];
+						messageLeader = "[Verify (\"Constants in descriptions are not\")]";
 					} else if (lastArg.StartsWith ("message :")) {
 						// Skip 11 - sizeof(message : ")
 						message = " " + lastArg [10..];
+						messageLeader = "[Verify (\"Constants in descriptions are not\")]";
 					}
-					messageLeader = "[Verify (\"Constants in descriptions are not\")]";
 				}
 			}
 
