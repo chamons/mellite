@@ -88,7 +88,12 @@ namespace mellite {
 			createdAttributes.AddRange (ProcessUnavailable (info));
 			createdAttributes.AddRange (ProcessObsolete (info));
 
-			return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info, createdAttributes)));
+			// Only reformat attributes if we're created new attributes or have existing availability attributes wrapped in defines
+			if (createdAttributes.Any () || info.ExistingAvailabilityAttributes.Any ()) {
+				return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info, createdAttributes)));
+			} else {
+				return member;
+			}
 		}
 
 		List<AttributeListSyntax> ProcessIntroduced (HarvestedMemberInfo info)
