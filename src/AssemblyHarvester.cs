@@ -38,15 +38,6 @@ namespace mellite {
 			return new AssemblyHarvestInfo (Data);
 		}
 
-		string GetKeyname (MemberReference member, MemberReference? parent)
-		{
-			if (parent != null) {
-				return parent.FullName + "." + member.Name;
-			} else {
-				return member.FullName;
-			}
-		}
-
 		IEnumerable<HarvestedAvailabilityInfo> GetAvailabilityAttributes (IEnumerable<CustomAttribute> attributes)
 		{
 			var availability = new List<HarvestedAvailabilityInfo> ();
