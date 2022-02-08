@@ -860,6 +860,7 @@ public struct AVCaptureViewControlsStyle {
 		}
 
 		const string SystemXI = "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll";
+		const string SystemXM = "/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/mono/Xamarin.Mac/Xamarin.Mac.dll";
 
 		// Convert a partial class's member with the parent info defined in another assembly (outside of our scope) 
 		[Fact]
@@ -1280,6 +1281,35 @@ public static class LaunchServices
 	}
 }
 ", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
+		}
+
+		[Fact]
+		public void NSTextExample ()
+		{
+			TestUtilities.TestProcess (@"namespace AppKit {
+	public class NSTextContainer {
+		[Mac (10,11)]
+		public static NSTextContainer FromSize (CGSize size)
+		{
+			return new NSTextContainer (size, false);
+		}
+	}
+}
+", @"namespace AppKit {
+	public class NSTextContainer {
+#if NET
+		[SupportedOSPlatform (""macos10.11"")]
+		[SupportedOSPlatform (""ios7.0"")]
+#else
+		[Mac (10,11)]
+#endif
+		public static NSTextContainer FromSize (CGSize size)
+		{
+			return new NSTextContainer (size, false);
+		}
+	}
+}
+", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXM });
 		}
 	}
 }
