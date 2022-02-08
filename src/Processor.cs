@@ -19,8 +19,16 @@ namespace mellite {
 		ListDefineUnresolvableFiles,
 	};
 
+	public class ProcessOptions {
+		public ProcessSteps Step = ProcessSteps.ConvertXamarinAttributes;
+		public List<string> Defines = new List<string> ();
+		public string? AssemblyPath = null;
+		public string? VerboseConditional = null;
+		public bool AllowErrors = false;
+	}
+
 	public static class Processor {
-		public static void ProcessFile (string path, ProcessSteps steps, List<string> defines, string? assemblyPath, string? verboseConditional, bool allowErrors)
+		public static void ProcessFile (string path, ProcessOptions options)
 		{
 			// Special case hack - OpenTK has some inline C++ defines in a /* */ comment block that are confusing the parser
 			// and there are literally zero defines we care about, so just early return
@@ -29,11 +37,7 @@ namespace mellite {
 			}
 
 			try {
-				if (assemblyPath != null) {
-					AssemblyHarvester harvester = new AssemblyHarvester ();
-					var info = harvester.Harvest (assemblyPath);
-				}
-				var text = ProcessText (File.ReadAllText (path), steps, defines, assemblyPath, allowErrors, path, verboseConditional);
+				var text = ProcessText (File.ReadAllText (path), options, path);
 				if (text != null) {
 					File.WriteAllText (path, text);
 				}
@@ -43,36 +47,36 @@ namespace mellite {
 			}
 		}
 
-		public static string? ProcessText (string text, ProcessSteps steps, List<string> defines, string? assemblyPath, bool allowErrors, string? path = null, string? verboseConditional = null)
+		public static string? ProcessText (string text, ProcessOptions options, string? path = null)
 		{
 			try {
-				switch (steps) {
+				switch (options.Step) {
 				case ProcessSteps.ConvertXamarinAttributes:
 					AssemblyHarvestInfo? assemblyInfo = null;
-					if (assemblyPath != null) {
+					if (options.AssemblyPath != null) {
 						var harvester = new AssemblyHarvester ();
-						assemblyInfo = harvester.Harvest (assemblyPath);
+						assemblyInfo = harvester.Harvest (options.AssemblyPath);
 					}
-					return Converter.Convert (text, defines, verboseConditional, assemblyInfo);
+					return Converter.Convert (text, options.Defines, options.VerboseConditional, assemblyInfo);
 				case ProcessSteps.StripExistingNET6Attributes:
 					return (new AttributeStripper ()).StripText (text);
 				case ProcessSteps.StripConditionBlocks:
 					return (new ConditionBlockStripper ()).StripText (text);
 				case ProcessSteps.StripVerify:
-					return (new VerifyStripper ()).StripText (text, verboseConditional);
+					return (new VerifyStripper ()).StripText (text, options.VerboseConditional);
 				case ProcessSteps.ListDefinesDetected: {
-					var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
+					var detectedDefines = (new DefineParser (options.VerboseConditional)).ParseAllDefines (text);
 					Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
 
-					var uniqueDefines = (new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
+					var uniqueDefines = (new DefineParser (options.VerboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false);
 					Console.WriteLine ();
 					Console.WriteLine (uniqueDefines != null ? $"Found Unique Defines:\n{String.Join (' ', uniqueDefines)}" : "No set of unique defines");
 					return null;
 				}
 				case ProcessSteps.ListDefineUnresolvableFiles: {
-					if ((new DefineParser (verboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
+					if ((new DefineParser (options.VerboseConditional)).FindUniqueDefinesThatCoverAll (text, ignoreNETDefines: false) == null) {
 						Console.WriteLine ($"Could not process: {path}");
-						var detectedDefines = (new DefineParser (verboseConditional)).ParseAllDefines (text);
+						var detectedDefines = (new DefineParser (options.VerboseConditional)).ParseAllDefines (text);
 						Console.WriteLine (detectedDefines != null ? $"  Found Defines:\n\t{String.Join ("\n\t", detectedDefines)}" : "Error parsing defines.");
 					}
 					return null;
@@ -81,7 +85,7 @@ namespace mellite {
 					return null;
 				}
 			} catch (Exception e) {
-				if (allowErrors) {
+				if (options.AllowErrors) {
 					Console.Error.WriteLine ($"While processing '{(String.IsNullOrEmpty (path) ? "unknown" : path)}' we hit exception: '{e}'");
 					return null;
 				} else {

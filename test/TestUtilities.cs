@@ -25,10 +25,15 @@ namespace binding
 }}
 ";
 
-		public static void TestProcess (string original, ProcessSteps steps, string expected, List<string>? defines = null, string? assemblyPath = null)
+		public static void TestProcess (string original, ProcessSteps step, string expected, List<string>? defines = null, string? assemblyPath = null)
 		{
-			defines ??= new List<string> ();
-			string processedText = Processor.ProcessText (original, steps, defines, assemblyPath, false)!;
+			var options = new ProcessOptions { Step = step, Defines = defines ?? new List<string> (), AssemblyPath = assemblyPath };
+			TestProcess (original, expected, options);
+		}
+
+		public static void TestProcess (string original, string expected, ProcessOptions options)
+		{
+			string processedText = Processor.ProcessText (original, options)!;
 #if true
 			Console.WriteLine (processedText);
 			Console.WriteLine ();
@@ -36,6 +41,5 @@ namespace binding
 #endif
 			Assert.Equal (expected, processedText, ignoreLineEndingDifferences: true);
 		}
-
 	}
 }

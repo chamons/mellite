@@ -1,20 +1,21 @@
 {
-    "editor.formatOnSave": true,
-    "[csharp]": {
-        "editor.formatOnSave": true,
-    },
-    "cSpell.words": [
-        "BGENERATOR",
-        "cctor",
-        "gchandle",
-        "klass",
-        "libc",
-        "mkdir",
-        "nint",
-        "tvos",
-        "watchos",
-        "WATCHOS",
-        "XAMCORE",
-        "Xunit"
-    ],
+  "editor.formatOnSave": true,
+  "[csharp]": {
+    "editor.formatOnSave": true
+  },
+  "cSpell.words": [
+    "BGENERATOR",
+    "cctor",
+    "gchandle",
+    "klass",
+    "libc",
+    "mkdir",
+    "nint",
+    "tvos",
+    "watchos",
+    "WATCHOS",
+    "XAMCORE",
+    "Xunit"
+  ],
+  "git.ignoreLimitWarning": true
 }

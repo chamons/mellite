@@ -18,26 +18,23 @@ namespace mellite {
 			string? path = null;
 			string? assemblyPath = null;
 			LocatorOptions locatorOptions = new LocatorOptions ();
-			ProcessSteps steps = ProcessSteps.ConvertXamarinAttributes;
-			List<string> defines = new List<string> ();
-			string? verboseConditional = null;
-			bool allowErrors = false;
+			ProcessOptions processOptions = new ProcessOptions ();
 
 			OptionSet os = new OptionSet ()
 			{
 				{ "h|?|help", "Displays the help", v => requestedAction = ActionType.Help },
 				{ "l|list-files", "Lists files considered for processing", v => requestedAction = ActionType.ListFilesToProcess },
 				{ "i|ignore=", "Directories (relative to root) not to be considered for processing", i => locatorOptions.Ignore.Add (i) },
-				{ "strip-attributes", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => steps = ProcessSteps.StripExistingNET6Attributes },
-				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks", i => steps = ProcessSteps.StripConditionBlocks },
-				{ "strip-verify", "Instead of converting attributes, 'strip' blocks looking for required [Verify] when the tool can be confused.", i => steps = ProcessSteps.StripVerify },
-				{ "detect-defines", "Detect the full set of defines needed to process all availability attributes in a file", i => steps = ProcessSteps.ListDefinesDetected },
-				{ "detect-unresolvable", "Detect the files that can not be resolved due to complex or conflicting defines", i => steps = ProcessSteps.ListDefineUnresolvableFiles },
-				{ "d|define=", "Set of defines to enable when parsing code.", d => defines.Add(d) },
-				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => verboseConditional = v },
+				{ "strip-attributes", "Instead of converting attributes, strip existing NET/!NET blocks of attributes", i => processOptions.Step = ProcessSteps.StripExistingNET6Attributes },
+				{ "strip-blocks", "Instead of converting attributes, strip existing NET/!NET blocks", i => processOptions.Step = ProcessSteps.StripConditionBlocks },
+				{ "strip-verify", "Instead of converting attributes, 'strip' blocks looking for required [Verify] when the tool can be confused.", i => processOptions.Step = ProcessSteps.StripVerify },
+				{ "detect-defines", "Detect the full set of defines needed to process all availability attributes in a file", i => processOptions.Step = ProcessSteps.ListDefinesDetected },
+				{ "detect-unresolvable", "Detect the files that can not be resolved due to complex or conflicting defines", i => processOptions.Step = ProcessSteps.ListDefineUnresolvableFiles },
+				{ "d|define=", "Set of defines to enable when parsing code.", d => processOptions.Defines.Add(d) },
+				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => processOptions.VerboseConditional = v },
 				{ "ignore-root", "Only process files in subdirectories of the target directory, do not process root level files", _ => locatorOptions.IgnoreRoot = true },
 				{ "harvest-assembly=", "Process assembly to provide additional context for partial only classes", a => assemblyPath = a },
-				{ "allow-errors", "Instead of crashing on first fatal error, just print and continue.", a => allowErrors = true },
+				{ "allow-errors", "Instead of crashing on first fatal error, just print and continue.", a => processOptions.AllowErrors = true },
 			};
 
 			try {
@@ -63,7 +60,7 @@ namespace mellite {
 			}
 			case ActionType.Process: {
 				foreach (var file in files) {
-					Processor.ProcessFile (file, steps, defines, assemblyPath, verboseConditional, allowErrors);
+					Processor.ProcessFile (file, processOptions);
 				}
 				break;
 			}
