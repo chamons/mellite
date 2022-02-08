@@ -859,6 +859,8 @@ public struct AVCaptureViewControlsStyle {
 }");
 		}
 
+		const string SystemXI = "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll";
+
 		// Convert a partial class's member with the parent info defined in another assembly (outside of our scope) 
 		[Fact]
 		public void PartialInfoConversion ()
@@ -880,7 +882,7 @@ public struct AVCaptureViewControlsStyle {
 		[Export (""CustomStyle"")]
 		int CustomStyle { get; set; }
 	}
-}", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+}", null, SystemXI);
 		}
 
 		[Fact]
@@ -907,7 +909,7 @@ public struct AVCaptureViewControlsStyle {
 		public bool SupportsVideoMaxFrameDuration {
 		}
 	}
-}", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+}", null, SystemXI);
 		}
 
 		[Fact]
@@ -926,7 +928,7 @@ public struct AVCaptureViewControlsStyle {
 	public enum AVCaptureDeviceTransportControlsPlaybackMode : long {
 		NotPlaying, Playing
 	}
-}", ProcessSteps.ConvertXamarinAttributes, @"", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll"));
+}", ProcessSteps.ConvertXamarinAttributes, @"", null, SystemXI));
 		}
 
 		[Fact]
@@ -1015,7 +1017,7 @@ public class ABPerson {
 #endif
    public static ABPersonCompositeNameFormat GetCompositeNameFormat (ABRecord? record) {}
 }
-}", null, "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll");
+}", null, SystemXI);
 		}
 
 		[Fact]
@@ -1207,6 +1209,77 @@ public static class LaunchServices
 	}
 }
 ");
+		}
+
+		[Fact]
+		public void DefaultPlatformAttributeFromNamespace ()
+		{
+			TestUtilities.TestProcess (@"namespace Network {
+	public class NWTxtRecord : NativeObject {
+		[Mac (10, 10)]
+		public bool Apply (NWTxtRecordApplyDelegate handler)
+		{
+		}
+	}
+}
+", @"namespace Network {
+	public class NWTxtRecord : NativeObject {
+#if NET
+		[SupportedOSPlatform (""macos10.10"")]
+		[SupportedOSPlatform (""ios"")]
+#else
+		[Mac (10, 10)]
+#endif
+		public bool Apply (NWTxtRecordApplyDelegate handler)
+		{
+		}
+	}
+}
+", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
+
+			TestUtilities.TestProcess (@"namespace AppKit {
+	public class NWTxtRecord : NativeObject {
+		[Mac (10, 10)]
+		public bool Apply (NWTxtRecordApplyDelegate handler)
+		{
+		}
+	}
+}
+", @"namespace AppKit {
+	public class NWTxtRecord : NativeObject {
+#if NET
+		[SupportedOSPlatform (""macos10.10"")]
+#else
+		[Mac (10, 10)]
+#endif
+		public bool Apply (NWTxtRecordApplyDelegate handler)
+		{
+		}
+	}
+}
+", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
+
+			TestUtilities.TestProcess (@"namespace UIKit {
+	public class NWTxtRecord : NativeObject {
+		[iOS (10, 0)]
+		public bool Apply (NWTxtRecordApplyDelegate handler)
+		{
+		}
+	}
+}
+", @"namespace UIKit {
+	public class NWTxtRecord : NativeObject {
+#if NET
+		[SupportedOSPlatform (""ios10.0"")]
+#else
+		[iOS (10, 0)]
+#endif
+		public bool Apply (NWTxtRecordApplyDelegate handler)
+		{
+		}
+	}
+}
+", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
 		}
 	}
 }

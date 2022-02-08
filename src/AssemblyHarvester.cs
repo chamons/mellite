@@ -20,7 +20,7 @@ namespace mellite {
 	public class AssemblyHarvester {
 		Dictionary<string, List<HarvestedAvailabilityInfo>> Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
 
-		public AssemblyHarvestInfo Harvest (string path)
+		public AssemblyHarvestInfo Harvest (string path, bool addDefaultIntroduced = false)
 		{
 			Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
 
@@ -33,9 +33,37 @@ namespace mellite {
 			foreach (var module in assembly.Modules) {
 				foreach (var type in module.Types) {
 					Data [type.FullName] = GetAvailabilityAttributes (type.CustomAttributes).ToList ();
+					if (addDefaultIntroduced) {
+						ProcessDefaultIntroduced (type, Data);
+					}
 				}
 			}
 			return new AssemblyHarvestInfo (Data);
+		}
+
+		void ProcessDefaultIntroduced (TypeDefinition type, Dictionary<string, List<HarvestedAvailabilityInfo>> data)
+		{
+			string ns = type.FullName.Split ('.').First ();
+			List<string> defaultIntroducedPlatforms;
+			switch (ns) {
+			case "AppKit":
+				defaultIntroducedPlatforms = new List<string> { "PlatformName.MacOSX" };
+				break;
+			case "UIKit":
+				defaultIntroducedPlatforms = new List<string> { "PlatformName.iOS" };
+				break;
+			default:
+				defaultIntroducedPlatforms = new List<string> { "PlatformName.MacOSX", "PlatformName.iOS" };
+				break;
+			}
+
+			var introduced = Data [type.FullName].Where (d => d.Attribute.Name.ToString () == "Introduced").ToList ();
+
+			foreach (var platform in defaultIntroducedPlatforms) {
+				if (!introduced.Any (i => i.Attribute.ArgumentList!.Arguments [0].ToString () == platform)) {
+					Data [type.FullName].Add (new HarvestedAvailabilityInfo ("Introduced", platform));
+				}
+			}
 		}
 
 		IEnumerable<HarvestedAvailabilityInfo> GetAvailabilityAttributes (IEnumerable<CustomAttribute> attributes)

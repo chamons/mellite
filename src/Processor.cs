@@ -25,6 +25,7 @@ namespace mellite {
 		public string? AssemblyPath = null;
 		public string? VerboseConditional = null;
 		public bool AllowErrors = false;
+		public bool AddDefaultIntroduced = false;
 	}
 
 	public static class Processor {
@@ -55,7 +56,7 @@ namespace mellite {
 					AssemblyHarvestInfo? assemblyInfo = null;
 					if (options.AssemblyPath != null) {
 						var harvester = new AssemblyHarvester ();
-						assemblyInfo = harvester.Harvest (options.AssemblyPath);
+						assemblyInfo = harvester.Harvest (options.AssemblyPath, options.AddDefaultIntroduced);
 					}
 					return Converter.Convert (text, options.Defines, options.VerboseConditional, assemblyInfo);
 				case ProcessSteps.StripExistingNET6Attributes:

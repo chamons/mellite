@@ -16,6 +16,6 @@ dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build $SDK_PA
 echo "Completed - Please review and commit."
 read _
 echo "Running final conversion..."
-dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build $SDK_PATH --harvest-assembly=/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll
+dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build $SDK_PATH --harvest-assembly=/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll --add-default-introduced
 echo "Completed - Please review and commit."
 read _
