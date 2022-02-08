@@ -16,7 +16,6 @@ namespace mellite {
 		{
 			ActionType requestedAction = ActionType.Process;
 			string? path = null;
-			string? assemblyPath = null;
 			LocatorOptions locatorOptions = new LocatorOptions ();
 			ProcessOptions processOptions = new ProcessOptions ();
 
@@ -33,7 +32,7 @@ namespace mellite {
 				{ "d|define=", "Set of defines to enable when parsing code.", d => processOptions.Defines.Add(d) },
 				{ "v|verbose-conditional=", "When using tools that analyze conditionals, output the line numbers of blocks that triggered this conditional.", v => processOptions.VerboseConditional = v },
 				{ "ignore-root", "Only process files in subdirectories of the target directory, do not process root level files", _ => locatorOptions.IgnoreRoot = true },
-				{ "harvest-assembly=", "Process assembly to provide additional context for partial only classes", a => assemblyPath = a },
+				{ "harvest-assembly=", "Process assembly to provide additional context for partial only classes", a => processOptions.AssemblyPath = a },
 				{ "allow-errors", "Instead of crashing on first fatal error, just print and continue.", a => processOptions.AllowErrors = true },
 				{ "add-default-introduced", "When processing the harvested assembly treat types with no introduced attribute as ios/mac based upon namespace.", a => processOptions.AddDefaultIntroduced = true },
 			};
