@@ -38,28 +38,6 @@ namespace mellite {
 			return new AssemblyHarvestInfo (Data);
 		}
 
-		void Process (MemberReference member, MemberReference? parent)
-		{
-			var attributes = new List<HarvestedAvailabilityInfo> ();
-			switch (member) {
-			case TypeDefinition definition:
-				attributes = GetAvailabilityAttributes (definition.CustomAttributes).ToList ();
-				break;
-			case PropertyDefinition prop:
-				attributes = GetAvailabilityAttributes (prop.CustomAttributes).ToList ();
-				break;
-			case MethodDefinition meth:
-				attributes = GetAvailabilityAttributes (meth.CustomAttributes).ToList ();
-				break;
-			case EventDefinition e:
-				attributes = GetAvailabilityAttributes (e.CustomAttributes).ToList ();
-				break;
-			}
-			if (attributes.Any ()) {
-				Data [GetKeyname (member, parent)] = attributes;
-			}
-		}
-
 		string GetKeyname (MemberReference member, MemberReference? parent)
 		{
 			if (parent != null) {
