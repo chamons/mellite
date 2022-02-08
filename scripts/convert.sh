@@ -5,7 +5,7 @@ set -u
 set -o pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-SDK_PATH=~/Programming/xamarin-macios/src/$1/
+SDK_PATH=~/Programming/xamarin-macios/src/$1
 
 echo "Checking for unresolvable first..."
 dotnet run --project $SCRIPT_DIR/../src/mellite.csproj -- --ignore=build $SDK_PATH --detect-unresolvable
