@@ -15,18 +15,21 @@ namespace mellite {
 		public readonly AttributeSyntax Attribute;
 		public readonly string? Target;
 		public readonly string? Comment;
+		public bool Implied;
 
-		public HarvestedAvailabilityInfo (AttributeSyntax attribute, string? target, string? comment)
+		public HarvestedAvailabilityInfo (AttributeSyntax attribute, string? target, string? comment, bool implied = false)
 		{
 			Attribute = attribute;
 			Target = target;
 			Comment = comment;
+			Implied = implied;
 		}
 
-		public HarvestedAvailabilityInfo (string name, string argList)
+		public HarvestedAvailabilityInfo (string name, string argList, bool implied = false)
 		{
 			var args = SyntaxFactory.ParseAttributeArgumentList ($"({argList})");
 			Attribute = SyntaxFactory.Attribute (SyntaxFactory.ParseName (name), args);
+			Implied = implied;
 			Target = null;
 			Comment = null;
 		}
@@ -42,6 +45,7 @@ namespace mellite {
 		public ReadOnlyCollection<HarvestedAvailabilityInfo> ExistingAvailabilityAttributes;
 		public ReadOnlyCollection<HarvestedAvailabilityInfo> NonAvailabilityAttributes;
 
+		public ReadOnlyCollection<AttributeSyntax> ImpliedIntroducedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> IntroducedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> DeprecatedAttributesToProcess;
 		public ReadOnlyCollection<AttributeSyntax> UnavailableAttributesToProcess;
@@ -54,11 +58,12 @@ namespace mellite {
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<HarvestedAvailabilityInfo> existingAvailabilityAttributes, List<HarvestedAvailabilityInfo> nonAvailabilityAttributes, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		public HarvestedMemberInfo (List<HarvestedAvailabilityInfo> existingAvailabilityAttributes, List<HarvestedAvailabilityInfo> nonAvailabilityAttributes, List<AttributeSyntax> impliedIntroducedAttributesToProcess, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
 		{
 			ExistingAvailabilityAttributes = existingAvailabilityAttributes.AsReadOnly ();
 			NonAvailabilityAttributes = nonAvailabilityAttributes.AsReadOnly ();
 
+			ImpliedIntroducedAttributesToProcess = impliedIntroducedAttributesToProcess.AsReadOnly ();
 			IntroducedAttributesToProcess = introducedAttributesToProcess.AsReadOnly ();
 			DeprecatedAttributesToProcess = deprecatedAttributesToProcess.AsReadOnly ();
 			UnavailableAttributesToProcess = unavailableAttributesToProcess.AsReadOnly ();
@@ -168,23 +173,36 @@ namespace mellite {
 				List<string> fullyUnavailablePlatforms = unavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
 					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
 
+				// We have a pickle here in ordering:
+				// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
+				//    as attributes from the generator.cs should be respected
+				// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
+				//    "override" attributes copied from the parent context.
+				// To solve this bind, we copy everything but the implied, then do parent context hoisting, then copy the implied
+				// CopyNonConflicting will do the right thing and not override/duplicate introduced
+				var impliedIntroducedAttributesToProcess = new List<AttributeSyntax> ();
 				if (assemblyInfo != null) {
 					string fullName = GetFullName (parent);
 
 					if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
 						HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
+						impliedIntroducedAttributesToProcess = assemblyParentInfo.ImpliedIntroducedAttributesToProcess.ToList ();
 						CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
 						CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
 						CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
 						CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
 					}
 				}
+
 				// Then copy down any information from our current roslyn context
 				HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null, assemblyInfo);
 				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
 				CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
 				CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
 				CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+
+				// Then finally, copy any implied attributes, which won't prevent any parent info to be copied down, since we're last
+				CopyNonConflicting (introducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
 			}
 
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
@@ -192,11 +210,12 @@ namespace mellite {
 			ForceiOSToEndOfList (deprecatedAttributesToProcess);
 			ForceiOSToEndOfList (obsoleteAttributesToProcess);
 
-			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, nonWhitespaceTrivia, newlineTrivia, indentTrivia);
+			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, new List<AttributeSyntax> (), introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, nonWhitespaceTrivia, newlineTrivia, indentTrivia);
 		}
 
 		public static HarvestedMemberInfo ProcessAssemblyParent (List<HarvestedAvailabilityInfo> infos)
 		{
+			var impliedIntroducedAttributesToProcess = new List<AttributeSyntax> ();
 			var introducedAttributesToProcess = new List<AttributeSyntax> ();
 			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
 			var unavailableAttributesToProcess = new List<AttributeSyntax> ();
@@ -209,7 +228,11 @@ namespace mellite {
 				case "TV":
 				case "MacCatalyst":
 				case "Introduced": {
-					AddIfSupportedPlatform (info.Attribute, introducedAttributesToProcess);
+					if (info.Implied) {
+						AddIfSupportedPlatform (info.Attribute, impliedIntroducedAttributesToProcess);
+					} else {
+						AddIfSupportedPlatform (info.Attribute, introducedAttributesToProcess);
+					}
 					break;
 				}
 				case "Deprecated": {
@@ -233,7 +256,7 @@ namespace mellite {
 				}
 			}
 
-			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null);
+			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), impliedIntroducedAttributesToProcess, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null);
 		}
 
 		static string GetFullName (BaseTypeDeclarationSyntax parent)

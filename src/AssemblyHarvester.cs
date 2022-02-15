@@ -54,7 +54,29 @@ namespace mellite {
 			}
 		}
 
-		public IEnumerable<string> PlatformsFoundOn (string fullName) => AssemblyAvailability [fullName];
+		public IEnumerable<string> PlatformsFoundOn (string fullName)
+		{
+			switch (fullName.Split (".").First ()) {
+			case "AppKit": {
+				string swapped = "UIKit." + String.Join (".", fullName.Split (".").Skip (1));
+				if (AssemblyAvailability.TryGetValue (swapped, out var swappedValue)) {
+					return AssemblyAvailability [fullName].Union (swappedValue);
+				} else {
+					return AssemblyAvailability [fullName];
+				}
+			}
+			case "UIKit": {
+				string swapped = "AppKit." + String.Join (".", fullName.Split (".").Skip (1));
+				if (AssemblyAvailability.TryGetValue (swapped, out var swappedValue)) {
+					return AssemblyAvailability [fullName].Union (swappedValue);
+				} else {
+					return AssemblyAvailability [fullName];
+				}
+			}
+			default:
+				return AssemblyAvailability [fullName];
+			}
+		}
 	}
 
 	// Harvest information from a given .NET assembly to inform AttributeHarvester processing
@@ -93,7 +115,7 @@ namespace mellite {
 			var existing = new HashSet<string> (platformsAlreadyIntroduced.Select (i => i.Attribute.ArgumentList!.Arguments [0].ToString ()));
 			var platformsFound = Finder!.PlatformsFoundOn (type.FullName);
 			foreach (var platform in platformsFound.Where (p => !existing.Contains (p))) {
-				Data [type.FullName].Add (new HarvestedAvailabilityInfo ("Introduced", platform));
+				Data [type.FullName].Add (new HarvestedAvailabilityInfo ("Introduced", platform, true));
 			}
 		}
 

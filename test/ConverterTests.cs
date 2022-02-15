@@ -1230,6 +1230,8 @@ public static class LaunchServices
 #if NET
 		[SupportedOSPlatform (""macos10.10"")]
 		[SupportedOSPlatform (""ios"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+		[SupportedOSPlatform (""tvos"")]
 #else
 		[Mac (10, 10)]
 #endif
@@ -1238,7 +1240,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 
 			TestUtilities.TestProcess (@"namespace AppKit {
 	public class NWTxtRecord : NativeObject {
@@ -1260,7 +1262,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 
 			TestUtilities.TestProcess (@"namespace UIKit {
 	public class NWTxtRecord : NativeObject {
@@ -1282,7 +1284,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 		}
 
 		[Fact]
@@ -1302,6 +1304,8 @@ public static class LaunchServices
 #if NET
 		[SupportedOSPlatform (""macos10.11"")]
 		[SupportedOSPlatform (""ios7.0"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+		[SupportedOSPlatform (""tvos"")]
 #else
 		[Mac (10,11)]
 #endif
@@ -1311,7 +1315,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
+", new ProcessOptions () { AssemblyPath = SystemXM, AddDefaultIntroducedPath = SystemAssemblies });
 		}
 
 		[Fact]
