@@ -16,13 +16,58 @@ namespace mellite {
 		}
 	}
 
+	class PlatformAssemblyExistenceFinder {
+		// FullName -> (exists on PlatformName)
+		Dictionary<string, HashSet<string>> AssemblyAvailability = new Dictionary<string, HashSet<string>> ();
+
+		static (string, string []) [] PlatformMapping = new (string, string []) [] {
+					("Xamarin.iOS.dll", new [] { "PlatformName.iOS", "PlatformName.MacCatalyst"}),
+					("Xamarin.Mac.dll", new [] { "PlatformName.MacOSX"}),
+					("Xamarin.TVOS.dll", new [] { "PlatformName.TvOS"})};
+
+		public PlatformAssemblyExistenceFinder (string addDefaultIntroducedPath)
+		{
+			foreach (var (assemblyName, platformNames) in PlatformMapping) {
+
+				var resolver = new DefaultAssemblyResolver ();
+				resolver.AddSearchDirectory (addDefaultIntroducedPath);
+				var parameters = new ReaderParameters () {
+					AssemblyResolver = resolver,
+				};
+				var assembly = AssemblyDefinition.ReadAssembly (Path.Join (addDefaultIntroducedPath, assemblyName), parameters);
+				foreach (var module in assembly.Modules) {
+					foreach (var type in module.Types) {
+						foreach (var platformName in platformNames) {
+							Add (type.FullName, platformName);
+						}
+					}
+				}
+			}
+		}
+
+		void Add (string fullName, string platformName)
+		{
+			if (AssemblyAvailability.TryGetValue (fullName, out var v)) {
+				v.Add (platformName);
+			} else {
+				AssemblyAvailability [fullName] = new HashSet<string> (new [] { platformName });
+			}
+		}
+
+		public IEnumerable<string> PlatformsFoundOn (string fullName) => AssemblyAvailability [fullName];
+	}
+
 	// Harvest information from a given .NET assembly to inform AttributeHarvester processing
 	public class AssemblyHarvester {
 		Dictionary<string, List<HarvestedAvailabilityInfo>> Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
+		PlatformAssemblyExistenceFinder? Finder;
 
-		public AssemblyHarvestInfo Harvest (string path, bool addDefaultIntroduced = false)
+		public AssemblyHarvestInfo Harvest (string path, string? addDefaultIntroducedPath = null)
 		{
 			Data = new Dictionary<string, List<HarvestedAvailabilityInfo>> ();
+			if (addDefaultIntroducedPath != null) {
+				Finder = new PlatformAssemblyExistenceFinder (addDefaultIntroducedPath);
+			}
 
 			var resolver = new DefaultAssemblyResolver ();
 			resolver.AddSearchDirectory (Path.GetDirectoryName (path));
@@ -33,36 +78,22 @@ namespace mellite {
 			foreach (var module in assembly.Modules) {
 				foreach (var type in module.Types) {
 					Data [type.FullName] = GetAvailabilityAttributes (type.CustomAttributes).ToList ();
-					if (addDefaultIntroduced) {
-						ProcessDefaultIntroduced (type, Data);
+					if (Finder != null) {
+						ProcessDefaultIntroduced (type);
 					}
 				}
 			}
 			return new AssemblyHarvestInfo (Data);
 		}
 
-		void ProcessDefaultIntroduced (TypeDefinition type, Dictionary<string, List<HarvestedAvailabilityInfo>> data)
+		void ProcessDefaultIntroduced (TypeDefinition type)
 		{
-			string ns = type.FullName.Split ('.').First ();
-			List<string> defaultIntroducedPlatforms;
-			switch (ns) {
-			case "AppKit":
-				defaultIntroducedPlatforms = new List<string> { "PlatformName.MacOSX" };
-				break;
-			case "UIKit":
-				defaultIntroducedPlatforms = new List<string> { "PlatformName.iOS" };
-				break;
-			default:
-				defaultIntroducedPlatforms = new List<string> { "PlatformName.MacOSX", "PlatformName.iOS" };
-				break;
-			}
+			var platformsAlreadyIntroduced = Data [type.FullName].Where (d => d.Attribute.Name.ToString () == "Introduced");
 
-			var introduced = Data [type.FullName].Where (d => d.Attribute.Name.ToString () == "Introduced").ToList ();
-
-			foreach (var platform in defaultIntroducedPlatforms) {
-				if (!introduced.Any (i => i.Attribute.ArgumentList!.Arguments [0].ToString () == platform)) {
-					Data [type.FullName].Add (new HarvestedAvailabilityInfo ("Introduced", platform));
-				}
+			var existing = new HashSet<string> (platformsAlreadyIntroduced.Select (i => i.Attribute.ArgumentList!.Arguments [0].ToString ()));
+			var platformsFound = Finder!.PlatformsFoundOn (type.FullName);
+			foreach (var platform in platformsFound.Where (p => !existing.Contains (p))) {
+				Data [type.FullName].Add (new HarvestedAvailabilityInfo ("Introduced", platform));
 			}
 		}
 

@@ -22,10 +22,17 @@ namespace mellite {
 	public class ProcessOptions {
 		public ProcessSteps Step = ProcessSteps.ConvertXamarinAttributes;
 		public List<string> Defines = new List<string> ();
-		public string? AssemblyPath = null;
 		public string? VerboseConditional = null;
 		public bool AllowErrors = false;
-		public bool AddDefaultIntroduced = false;
+		public string? AssemblyPath = null;
+		public string? AddDefaultIntroducedPath = null;
+
+		public void Validate ()
+		{
+			if (AddDefaultIntroducedPath != null && AssemblyPath == null) {
+				throw new InvalidOperationException ("add-default-introduced is only valid when harvest-assembly is set");
+			}
+		}
 	}
 
 	public static class Processor {
@@ -50,13 +57,14 @@ namespace mellite {
 
 		public static string? ProcessText (string text, ProcessOptions options, string? path = null)
 		{
+			options.Validate ();
 			try {
 				switch (options.Step) {
 				case ProcessSteps.ConvertXamarinAttributes:
 					AssemblyHarvestInfo? assemblyInfo = null;
 					if (options.AssemblyPath != null) {
 						var harvester = new AssemblyHarvester ();
-						assemblyInfo = harvester.Harvest (options.AssemblyPath, options.AddDefaultIntroduced);
+						assemblyInfo = harvester.Harvest (options.AssemblyPath, options.AddDefaultIntroducedPath);
 					}
 					return Converter.Convert (text, options.Defines, options.VerboseConditional, assemblyInfo);
 				case ProcessSteps.StripExistingNET6Attributes:

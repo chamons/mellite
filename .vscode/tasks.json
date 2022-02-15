@@ -49,7 +49,7 @@
             "args": [
                 "test",
                 "${workspaceFolder}/test/mellite.tests.csproj",
-                "--filter=DefaultPlatformAttributeFromNamespace",
+                "--filter=mellite.tests.ConverterTests.NSTextExample",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
             ],

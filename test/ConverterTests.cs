@@ -859,8 +859,10 @@ public struct AVCaptureViewControlsStyle {
 }");
 		}
 
-		const string SystemXI = "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS/Xamarin.iOS.dll";
-		const string SystemXM = "/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/mono/Xamarin.Mac/Xamarin.Mac.dll";
+		const string SystemXI = "/Users/donblas/Programming/mellite/Xamarin.iOS.dll";
+		const string SystemXM = "/Users/donblas/Programming/mellite/Xamarin.Mac.dll";
+		// Sorry, if you aren't me you'll have to fix this...
+		const string SystemAssemblies = "/Users/donblas/Programming/mellite/";
 
 		// Convert a partial class's member with the parent info defined in another assembly (outside of our scope) 
 		[Fact]
@@ -1236,7 +1238,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
+", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
 
 			TestUtilities.TestProcess (@"namespace AppKit {
 	public class NWTxtRecord : NativeObject {
@@ -1258,7 +1260,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
+", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
 
 			TestUtilities.TestProcess (@"namespace UIKit {
 	public class NWTxtRecord : NativeObject {
@@ -1280,7 +1282,7 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXI });
+", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
 		}
 
 		[Fact]
@@ -1309,7 +1311,32 @@ public static class LaunchServices
 		}
 	}
 }
-", new ProcessOptions () { AddDefaultIntroduced = true, AssemblyPath = SystemXM });
+", new ProcessOptions () { AddDefaultIntroducedPath = SystemAssemblies });
+		}
+
+		[Fact]
+		public void CompressionExample ()
+		{
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	public partial class VTCompressionProperties {
+		[Mac (10,9)]
+		public VTH264EntropyMode H264EntropyMode { 
+	}
+}
+", @"namespace VideoToolbox {
+	public partial class VTCompressionProperties {
+#if NET
+		[SupportedOSPlatform (""macos10.9"")]
+		[SupportedOSPlatform (""ios8.0"")]
+		[SupportedOSPlatform (""tvos10.2"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+#else
+		[Mac (10,9)]
+#endif
+		public VTH264EntropyMode H264EntropyMode { 
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 		}
 	}
 }

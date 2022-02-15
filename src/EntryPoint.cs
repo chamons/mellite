@@ -34,7 +34,7 @@ namespace mellite {
 				{ "ignore-root", "Only process files in subdirectories of the target directory, do not process root level files", _ => locatorOptions.IgnoreRoot = true },
 				{ "harvest-assembly=", "Process assembly to provide additional context for partial only classes", a => processOptions.AssemblyPath = a },
 				{ "allow-errors", "Instead of crashing on first fatal error, just print and continue.", a => processOptions.AllowErrors = true },
-				{ "add-default-introduced", "When processing the harvested assembly treat types with no introduced attribute as ios/mac based upon namespace.", a => processOptions.AddDefaultIntroduced = true },
+				{ "add-default-introduced=", "When processing the harvested assembly treat types with no introduced attribute as based upon platform assemblies in this directory (iOS/Mac/Catalyst/TV must all be in this directory).", d => processOptions.AddDefaultIntroducedPath = d },
 			};
 
 			try {

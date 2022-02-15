@@ -5,8 +5,10 @@ Q=$(if $(V),,@)
 build:
 	$(Q) dotnet build --nologo
 
-sample:: reset
-	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build sample/
+sample::
+	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build --strip-attributes sample/second.cs
+	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build --strip-blocks sample/second.cs
+	$(Q) dotnet run --project src/mellite.csproj -- --ignore=build sample/second.cs
 
 reset::
 	$(Q) git checkout -- sample/

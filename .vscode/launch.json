@@ -11,7 +11,8 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/src/bin/Debug/net6.0/mellite.dll",
-            "args": ["--ignore=build", "/Users/donblas/Programming/xamarin-macios/src/ARKit/ARSkeleton.cs", "--prepropressed-dir=/Users/donblas/Programming/xamarin-macios/src/build/ios/native/ARKit/"],
+            "args": [
+                "--ignore=build", "/Users/donblas/Programming/xamarin-macios/src/AppKit/NSTextContainer.cs", "--harvest-assembly=/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/mono/Xamarin.Mac/Xamarin.Mac.dll", "--add-default-introduced"],
             "cwd": "${workspaceFolder}/src",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
