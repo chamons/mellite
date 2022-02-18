@@ -168,41 +168,58 @@ namespace mellite {
 				deprecatedAttributesToProcess.Any () ||
 				unavailableAttributesToProcess.Any () ||
 				obsoleteAttributesToProcess.Any ();
-			if (hasAnyAvailability && parent != null) {
-				// First copy down any information from the harvested assembly, if it exists
+			if (hasAnyAvailability) {
 				List<string> fullyUnavailablePlatforms = unavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
 					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
 
-				// We have a pickle here in ordering:
-				// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
-				//    as attributes from the generator.cs should be respected
-				// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
-				//    "override" attributes copied from the parent context.
-				// To solve this bind, we copy everything but the implied, then do parent context hoisting, then copy the implied
-				// CopyNonConflicting will do the right thing and not override/duplicate introduced
-				var impliedIntroducedAttributesToProcess = new List<AttributeSyntax> ();
-				if (assemblyInfo != null) {
-					string fullName = GetFullName (parent);
+				// If we have a parent, do the full process of copy from parent + assembly probe
+				if (parent != null) {
+					// First copy down any information from the harvested assembly, if it exists
+					// We have a pickle here in ordering:
+					// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
+					//    as attributes from the generator.cs should be respected
+					// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
+					//    "override" attributes copied from the parent context.
+					// To solve this bind, we copy everything but the implied, then do parent context hoisting, then copy the implied
+					// CopyNonConflicting will do the right thing and not override/duplicate introduced
+					var impliedIntroducedAttributesToProcess = new List<AttributeSyntax> ();
+					if (assemblyInfo != null) {
+						string fullName = GetFullName (parent);
 
-					if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
-						HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
-						impliedIntroducedAttributesToProcess = assemblyParentInfo.ImpliedIntroducedAttributesToProcess.ToList ();
-						CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
-						CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
-						CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
-						CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+						if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
+							HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
+							impliedIntroducedAttributesToProcess = assemblyParentInfo.ImpliedIntroducedAttributesToProcess.ToList ();
+							CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+						}
+					}
+
+					// Then copy down any information from our current roslyn context
+					HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null, assemblyInfo);
+					CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+					CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+					CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+					CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+
+					// Then finally, copy any implied attributes, which won't prevent any parent info to be copied down, since we're last
+					CopyNonConflicting (introducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
+				} else { // Only do the assembly probing since we have no parent context to copy from
+					if (assemblyInfo != null) {
+						string fullName = GetFullName ((BaseTypeDeclarationSyntax) member);
+
+						if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
+							HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
+							CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.ImpliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+							CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+
+						}
 					}
 				}
-
-				// Then copy down any information from our current roslyn context
-				HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null, assemblyInfo);
-				CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
-				CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
-				CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
-				CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
-
-				// Then finally, copy any implied attributes, which won't prevent any parent info to be copied down, since we're last
-				CopyNonConflicting (introducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
 			}
 
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess

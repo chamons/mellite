@@ -1342,5 +1342,42 @@ public static class LaunchServices
 }
 ", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 		}
+
+		[Fact]
+		public void PdfExample ()
+		{
+			TestUtilities.TestProcess (@"namespace PdfKit {
+	public partial class PdfAnnotation {
+		[Mac (10,12)]
+		public bool SetValue<T> (T value, PdfAnnotationKey key) where T : class, INativeObject {}
+	}
+}
+", @"", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
+
+		[Fact]
+		public void VideoToolboxExample ()
+		{
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	[iOS (8,0)]
+	[TV (10,2)]
+	public partial class VTCompressionSession {
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+	[iOS (8,0)]
+	[TV (10,2)]
+#endif
+	public partial class VTCompressionSession {
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
 	}
 }
