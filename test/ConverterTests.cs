@@ -875,6 +875,11 @@ public struct AVCaptureViewControlsStyle {
 		int CustomStyle { get; set; }
 	}
 }", ProcessSteps.ConvertXamarinAttributes, @"namespace Foundation {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""macos10.10"")]
+#else
+#endif
 	partial class NSDateComponentsFormatter {
 #if NET
 		[SupportedOSPlatform (""ios9.0"")]
@@ -898,6 +903,11 @@ public struct AVCaptureViewControlsStyle {
 		}
 	}
 }", ProcessSteps.ConvertXamarinAttributes, @"namespace AVFoundation {
+#if NET
+	[SupportedOSPlatform (""maccatalyst14.0"")]
+	[UnsupportedOSPlatform (""tvos"")]
+#else
+#endif
 	public partial class AVCaptureConnection {
 #if NET
 		[SupportedOSPlatform (""maccatalyst14.0"")]
@@ -1226,6 +1236,13 @@ public static class LaunchServices
 	}
 }
 ", @"namespace Network {
+#if NET
+	[SupportedOSPlatform (""ios"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+	[SupportedOSPlatform (""tvos"")]
+#else
+#endif
 	public class NWTxtRecord : NativeObject {
 #if NET
 		[SupportedOSPlatform (""macos10.10"")]
@@ -1300,6 +1317,13 @@ public static class LaunchServices
 	}
 }
 ", @"namespace AppKit {
+#if NET
+	[SupportedOSPlatform (""ios7.0"")]
+	[SupportedOSPlatform (""macos"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""tvos"")]
+#else
+#endif
 	public class NSTextContainer {
 #if NET
 		[SupportedOSPlatform (""macos10.11"")]
@@ -1359,7 +1383,25 @@ public static class LaunchServices
 		public bool SetValue<T> (T value, PdfAnnotationKey key) where T : class, INativeObject {}
 	}
 }
-", @"", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+", @"namespace PdfKit {
+#if NET
+	[SupportedOSPlatform (""ios11.0"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+#endif
+	public partial class PdfAnnotation {
+#if NET
+		[SupportedOSPlatform (""macos10.12"")]
+		[SupportedOSPlatform (""ios11.0"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+#else
+		[Mac (10,12)]
+#endif
+		public bool SetValue<T> (T value, PdfAnnotationKey key) where T : class, INativeObject {}
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 		}
 
 		[Fact]
