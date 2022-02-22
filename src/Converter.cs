@@ -236,18 +236,10 @@ namespace mellite {
 				leading.AddRange (TriviaConstants.Newline);
 
 				var trailing = new List<SyntaxTrivia> ();
-
-				foreach (var attribute in info.ExistingAvailabilityAttributes) {
-					// Roslyn harvested existing attributes don't follow our "every node should own the newline to the next line" rule
-					// So add info.IndentTrivia here by hand
-					trailing.Add (SyntaxFactory.DisabledText (attribute.ToAttributeList ().WithLeadingTrivia (info.IndentTrivia).ToFullString ()));
-					trailing.AddRange (TriviaConstants.Newline);
-				}
 				trailing.AddRange (TriviaConstants.EndIf);
 				trailing.AddRange (TriviaConstants.Newline);
 
 				newLinesAdded = AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
-
 			} else {
 				var leading = new List<SyntaxTrivia> ();
 				leading.AddRange (info.NewlineTrivia);
