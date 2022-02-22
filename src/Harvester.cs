@@ -314,6 +314,9 @@ namespace mellite {
 				case StructDeclarationSyntax str:
 					name = AppendIdentifier (name, str.Identifier);
 					break;
+				case EnumDeclarationSyntax e:
+					name = AppendIdentifier (name, e.Identifier);
+					break;
 				case CompilationUnitSyntax: // Just ignore, we'll be bailing out
 					break;
 				default:

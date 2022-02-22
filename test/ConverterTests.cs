@@ -1501,5 +1501,21 @@ public static class LaunchServices
 ", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 
 		}
+
+		[Fact]
+		public void EnumExampleWithAssemblies ()
+		{
+			const string testCase = @"using Foundation;
+	public enum NSFontCollectionAction
+	{
+		Unknown,
+		Shown,
+		Hidden,
+		Renamed
+	}
+
+";
+			TestUtilities.TestProcess (testCase, testCase, new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
 	}
 }
