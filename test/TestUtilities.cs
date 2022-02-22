@@ -34,11 +34,11 @@ namespace binding
 		public static void TestProcess (string original, string expected, ProcessOptions options)
 		{
 			string processedText = Processor.ProcessText (original, options)!;
-#if true
-			Console.WriteLine (processedText);
-			Console.WriteLine ();
-			Console.WriteLine (expected);
-#endif
+			if (Environment.GetEnvironmentVariable ("V") == "1") {
+				Console.WriteLine (processedText);
+				Console.WriteLine ();
+				Console.WriteLine (expected);
+			}
 			Assert.Equal (expected, processedText, ignoreLineEndingDifferences: true);
 		}
 	}

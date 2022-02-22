@@ -875,6 +875,11 @@ public struct AVCaptureViewControlsStyle {
 		int CustomStyle { get; set; }
 	}
 }", ProcessSteps.ConvertXamarinAttributes, @"namespace Foundation {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""macos10.10"")]
+#else
+#endif
 	partial class NSDateComponentsFormatter {
 #if NET
 		[SupportedOSPlatform (""ios9.0"")]
@@ -898,6 +903,11 @@ public struct AVCaptureViewControlsStyle {
 		}
 	}
 }", ProcessSteps.ConvertXamarinAttributes, @"namespace AVFoundation {
+#if NET
+	[SupportedOSPlatform (""maccatalyst14.0"")]
+	[UnsupportedOSPlatform (""tvos"")]
+#else
+#endif
 	public partial class AVCaptureConnection {
 #if NET
 		[SupportedOSPlatform (""maccatalyst14.0"")]
@@ -1226,6 +1236,13 @@ public static class LaunchServices
 	}
 }
 ", @"namespace Network {
+#if NET
+	[SupportedOSPlatform (""ios"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+	[SupportedOSPlatform (""tvos"")]
+#else
+#endif
 	public class NWTxtRecord : NativeObject {
 #if NET
 		[SupportedOSPlatform (""macos10.10"")]
@@ -1300,6 +1317,13 @@ public static class LaunchServices
 	}
 }
 ", @"namespace AppKit {
+#if NET
+	[SupportedOSPlatform (""ios7.0"")]
+	[SupportedOSPlatform (""macos"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""tvos"")]
+#else
+#endif
 	public class NSTextContainer {
 #if NET
 		[SupportedOSPlatform (""macos10.11"")]
@@ -1328,6 +1352,13 @@ public static class LaunchServices
 	}
 }
 ", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+#endif
 	public partial class VTCompressionProperties {
 #if NET
 		[SupportedOSPlatform (""macos10.9"")]
@@ -1338,6 +1369,110 @@ public static class LaunchServices
 		[Mac (10,9)]
 #endif
 		public VTH264EntropyMode H264EntropyMode { 
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
+
+		[Fact]
+		public void PdfExample ()
+		{
+			TestUtilities.TestProcess (@"namespace PdfKit {
+	public partial class PdfAnnotation {
+		[Mac (10,12)]
+		public bool SetValue<T> (T value, PdfAnnotationKey key) where T : class, INativeObject {}
+	}
+}
+", @"namespace PdfKit {
+#if NET
+	[SupportedOSPlatform (""ios11.0"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+#endif
+	public partial class PdfAnnotation {
+#if NET
+		[SupportedOSPlatform (""macos10.12"")]
+		[SupportedOSPlatform (""ios11.0"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+#else
+		[Mac (10,12)]
+#endif
+		public bool SetValue<T> (T value, PdfAnnotationKey key) where T : class, INativeObject {}
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
+
+		[Fact]
+		public void VideoToolboxExample ()
+		{
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	public partial class VTCompressionSession {
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+	[SupportedOSPlatform (""tvos"")]
+#else
+#endif
+	public partial class VTCompressionSession {
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	[iOS (8,0)]
+	[TV (10,2)]
+	public partial class VTCompressionSession {
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+	[iOS (8,0)]
+	[TV (10,2)]
+#endif
+	public partial class VTCompressionSession {
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	[iOS (8,0)]
+	[TV (10,2)]
+	public partial class VTCompressionSession {
+		[Mac (10,9)]
+		public VTStatus PrepareToEncodeFrames () {}
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+	[iOS (8,0)]
+	[TV (10,2)]
+#endif
+	public partial class VTCompressionSession {
+#if NET
+		[SupportedOSPlatform (""macos10.9"")]
+		[SupportedOSPlatform (""ios8.0"")]
+		[SupportedOSPlatform (""tvos10.2"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+#else
+		[Mac (10,9)]
+#endif
+		public VTStatus PrepareToEncodeFrames () {}
 	}
 }
 ", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
