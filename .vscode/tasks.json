@@ -1,5 +1,10 @@
 {
     "version": "2.0.0",
+    "options": {
+        "env": {
+          "V": "1"
+        }
+     },
     "tasks": [
         {
             "label": "build",
@@ -49,7 +54,7 @@
             "args": [
                 "test",
                 "${workspaceFolder}/test/mellite.tests.csproj",
-                "--filter=mellite.tests.ConverterTests.NSTextExample",
+                "--filter=mellite.tests.ConverterTests.VideoToolboxExample",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
             ],
