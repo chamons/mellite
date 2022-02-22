@@ -1532,5 +1532,37 @@ public static class LaunchServices
 
 
 		}
+
+		[Fact]
+		public void AppKitSpacing ()
+		{
+			TestUtilities.TestProcess (@"namespace AppKit {
+	public partial class NSArrayController {
+	}
+}", @"namespace AppKit {
+#if NET
+	[SupportedOSPlatform (""macos"")]
+	[UnsupportedOSPlatform (""maccatalyst"")]
+#endif
+	public partial class NSArrayController {
+	}
+}", new ProcessOptions () { AssemblyPath = SystemXM, AddDefaultIntroducedPath = SystemAssemblies });
+
+
+			TestUtilities.TestProcess (@"namespace AppKit {
+
+
+	public partial class NSArrayController {
+	}
+}", @"namespace AppKit {
+
+#if NET
+	[SupportedOSPlatform (""macos"")]
+	[UnsupportedOSPlatform (""maccatalyst"")]
+#endif
+	public partial class NSArrayController {
+	}
+}", new ProcessOptions () { AssemblyPath = SystemXM, AddDefaultIntroducedPath = SystemAssemblies });
+		}
 	}
 }
