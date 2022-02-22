@@ -11,6 +11,7 @@ namespace mellite {
 
 		public static SyntaxTriviaList Newline = SyntaxFactory.ParseTrailingTrivia (Environment.NewLine);
 		public static SyntaxTriviaList Space = SyntaxFactory.ParseLeadingTrivia (" ");
+		public static SyntaxTriviaList Tab = SyntaxFactory.ParseLeadingTrivia ("\t");
 
 	}
 }

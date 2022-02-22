@@ -35,15 +35,15 @@ namespace mellite {
 			AssemblyInfo = assemblyInfo;
 		}
 
-		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitEventDeclaration (EventDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitFieldDeclaration (FieldDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitDelegateDeclaration (DelegateDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
+		public override SyntaxNode? VisitPropertyDeclaration (PropertyDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
+		public override SyntaxNode? VisitMethodDeclaration (MethodDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
+		public override SyntaxNode? VisitEventDeclaration (EventDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
+		public override SyntaxNode? VisitFieldDeclaration (FieldDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
+		public override SyntaxNode? VisitDelegateDeclaration (DelegateDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
 
-		public override SyntaxNode? VisitEnumMemberDeclaration (EnumMemberDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitConstructorDeclaration (ConstructorDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
-		public override SyntaxNode? VisitInterfaceDeclaration (InterfaceDeclarationSyntax node) => Apply (node, node.Parent as BaseTypeDeclarationSyntax);
+		public override SyntaxNode? VisitEnumMemberDeclaration (EnumMemberDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
+		public override SyntaxNode? VisitConstructorDeclaration (ConstructorDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
+		public override SyntaxNode? VisitInterfaceDeclaration (InterfaceDeclarationSyntax node) => Apply (node, node.Parent as MemberDeclarationSyntax);
 
 		public override SyntaxNode? VisitEnumDeclaration (EnumDeclarationSyntax node)
 		{
@@ -60,7 +60,7 @@ namespace mellite {
 			// Need to first call base so properties/methods are visited
 			var processedNode = (StructDeclarationSyntax?) base.VisitStructDeclaration (node);
 			if (processedNode != null) {
-				return Apply (processedNode, null);
+				return Apply (processedNode, node.Parent as MemberDeclarationSyntax);
 			}
 			return null;
 		}
@@ -70,15 +70,15 @@ namespace mellite {
 			// Need to first call base so properties/methods are visited
 			var processedNode = (ClassDeclarationSyntax?) base.VisitClassDeclaration (node);
 			if (processedNode != null) {
-				return Apply (processedNode, null);
+				return Apply (processedNode, node.Parent as MemberDeclarationSyntax);
 			}
 			return null;
 		}
 
 		// An example of desired behavior - https://github.com/xamarin/xamarin-macios/blob/main/src/AudioUnit/AudioComponentDescription.cs#L166
-		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, BaseTypeDeclarationSyntax? parent)
+		public MemberDeclarationSyntax Apply (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent)
 		{
-			HarvestedMemberInfo info = AttributeHarvester.Process (member, parent, AssemblyInfo);
+			HarvestedMemberInfo info = (new AttributeHarvester ()).Process (member, parent, AssemblyInfo);
 
 			var createdAttributes = new List<AttributeListSyntax> ();
 			// Some general rules for trivia in created nodes

@@ -1328,6 +1328,13 @@ public static class LaunchServices
 	}
 }
 ", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+#endif
 	public partial class VTCompressionProperties {
 #if NET
 		[SupportedOSPlatform (""macos10.9"")]
@@ -1359,6 +1366,23 @@ public static class LaunchServices
 		public void VideoToolboxExample ()
 		{
 			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	public partial class VTCompressionSession {
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+	[SupportedOSPlatform (""tvos"")]
+#else
+#endif
+	public partial class VTCompressionSession {
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
 	[iOS (8,0)]
 	[TV (10,2)]
 	public partial class VTCompressionSession {
@@ -1375,6 +1399,38 @@ public static class LaunchServices
 	[TV (10,2)]
 #endif
 	public partial class VTCompressionSession {
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	[iOS (8,0)]
+	[TV (10,2)]
+	public partial class VTCompressionSession {
+		[Mac (10,9)]
+		public VTStatus PrepareToEncodeFrames () {}
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+	[iOS (8,0)]
+	[TV (10,2)]
+#endif
+	public partial class VTCompressionSession {
+#if NET
+		[SupportedOSPlatform (""macos10.9"")]
+		[SupportedOSPlatform (""ios8.0"")]
+		[SupportedOSPlatform (""tvos10.2"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+#else
+		[Mac (10,9)]
+#endif
+		public VTStatus PrepareToEncodeFrames () {}
 	}
 }
 ", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });

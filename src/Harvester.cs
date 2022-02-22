@@ -76,25 +76,88 @@ namespace mellite {
 	}
 
 	// Harvest information from a given Roslyn node for later conversion
-	public static class AttributeHarvester {
-		public static HarvestedMemberInfo Process (MemberDeclarationSyntax member, BaseTypeDeclarationSyntax? parent, AssemblyHarvestInfo? assemblyInfo)
+	public class AttributeHarvester {
+		List<HarvestedAvailabilityInfo> ExistingAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
+		List<HarvestedAvailabilityInfo> NonAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
+
+		List<AttributeSyntax> IntroducedAttributesToProcess = new List<AttributeSyntax> ();
+		List<AttributeSyntax> DeprecatedAttributesToProcess = new List<AttributeSyntax> ();
+		List<AttributeSyntax> UnavailableAttributesToProcess = new List<AttributeSyntax> ();
+		List<AttributeSyntax> ObsoleteAttributesToProcess = new List<AttributeSyntax> ();
+
+		SyntaxTriviaList? NonWhitespaceTrivia = null;
+		SyntaxTriviaList? NewlineTrivia = null;
+		SyntaxTriviaList? IndentTrivia = null;
+
+		public HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent, AssemblyHarvestInfo? assemblyInfo)
 		{
-			var existingAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
-			var nonAvailabilityAttributes = new List<HarvestedAvailabilityInfo> ();
+			ProcessAttributesOnMember (member);
 
-			var introducedAttributesToProcess = new List<AttributeSyntax> ();
-			var deprecatedAttributesToProcess = new List<AttributeSyntax> ();
-			var unavailableAttributesToProcess = new List<AttributeSyntax> ();
-			var obsoleteAttributesToProcess = new List<AttributeSyntax> ();
+			// Platforms that are explicitly unavailable with no version [NoiOS] should not have any attributes copied from assembly/parent
+			List<string> fullyUnavailablePlatforms = UnavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
+				.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
 
-			SyntaxTriviaList? nonWhitespaceTrivia = null;
-			SyntaxTriviaList? newlineTrivia = null;
-			SyntaxTriviaList? indentTrivia = null;
+			// First copy down any information from the harvested assembly, if it exists
+			// We have a pickle here in ordering:
+			// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
+			//    as attributes from the generator.cs should be respected
+			// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
+			//    "override" attributes copied from the parent context.
+			// To solve this bind, we copy everything but the implied, copy from the parent, then copy the implied
+			// CopyNonConflicting will do the right thing and not override/duplicate introduced
+			var impliedIntroducedAttributesToProcess = ProcessAttributeFromAssemblyInfo (member, parent, assemblyInfo, fullyUnavailablePlatforms);
 
+			// If we define any availability attributes on a member and have a parent, we must copy
+			// all non-conflicting availabilities down. This is the crux of the problem this tool is to solve.
+			bool hasAnyAvailability = IntroducedAttributesToProcess.Any () ||
+				DeprecatedAttributesToProcess.Any () ||
+				UnavailableAttributesToProcess.Any () ||
+				ObsoleteAttributesToProcess.Any ();
+			if (hasAnyAvailability && parent != null) {
+				CopyAvailabilityFromParent (member, parent, assemblyInfo, fullyUnavailablePlatforms);
+			}
+
+			// Then finally, copy any implied attributes, which won't prevent any parent info to be copied down, since we're last
+			CopyNonConflicting (IntroducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
+
+			// Hack - When we don't have a parent context because we're on a class that has no attributes, the indent is almost always one tab
+			// so if we don't have one set, hack that in if not set...
+			if (parent is NamespaceDeclarationSyntax && assemblyInfo != null && IndentTrivia == null) {
+				IndentTrivia = new SyntaxTriviaList (TriviaConstants.Tab);
+			}
+
+			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
+			// as the #if define in the block is a superset of others and must come last
+			ForceiOSToEndOfList (DeprecatedAttributesToProcess);
+			ForceiOSToEndOfList (ObsoleteAttributesToProcess);
+
+			return new HarvestedMemberInfo (ExistingAvailabilityAttributes, NonAvailabilityAttributes, new List<AttributeSyntax> (), IntroducedAttributesToProcess, DeprecatedAttributesToProcess, UnavailableAttributesToProcess, ObsoleteAttributesToProcess, NonWhitespaceTrivia, NewlineTrivia, IndentTrivia);
+		}
+
+		List<AttributeSyntax> ProcessAttributeFromAssemblyInfo (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent, AssemblyHarvestInfo? assemblyInfo, List<string> fullyUnavailablePlatforms)
+		{
+			var impliedIntroducedAttributesToProcess = new List<AttributeSyntax> ();
+			if (assemblyInfo != null) {
+				string typeName = GetClassAndNamespace (member, parent);
+
+				if (assemblyInfo.Data.TryGetValue (typeName, out var assemblyData)) {
+					HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
+					impliedIntroducedAttributesToProcess = assemblyParentInfo.ImpliedIntroducedAttributesToProcess.ToList ();
+					CopyNonConflicting (IntroducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+					CopyNonConflicting (DeprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+					CopyNonConflicting (UnavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+					CopyNonConflicting (ObsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
+				}
+			}
+			return impliedIntroducedAttributesToProcess;
+		}
+
+		void ProcessAttributesOnMember (MemberDeclarationSyntax member)
+		{
 			bool processingFirst = true;
 			foreach (var attributeList in member.AttributeLists) {
-				if (newlineTrivia == null) {
-					(nonWhitespaceTrivia, newlineTrivia, indentTrivia) = SplitNodeTrivia (attributeList);
+				if (NewlineTrivia == null) {
+					(NonWhitespaceTrivia, NewlineTrivia, IndentTrivia) = SplitNodeTrivia (attributeList);
 				}
 
 				bool anyAvailabilityFound = false;
@@ -105,14 +168,14 @@ namespace mellite {
 					case "TV":
 					case "MacCatalyst":
 					case "Introduced": {
-						AddIfSupportedPlatform (attribute, introducedAttributesToProcess);
-						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						AddIfSupportedPlatform (attribute, IntroducedAttributesToProcess);
+						ExistingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						anyAvailabilityFound = true;
 						break;
 					}
 					case "Deprecated": {
-						AddIfSupportedPlatform (attribute, deprecatedAttributesToProcess);
-						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						AddIfSupportedPlatform (attribute, DeprecatedAttributesToProcess);
+						ExistingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						anyAvailabilityFound = true;
 						break;
 					}
@@ -121,24 +184,24 @@ namespace mellite {
 					case "NoTV":
 					case "NoMacCatalyst":
 					case "Unavailable": {
-						AddIfSupportedPlatform (attribute, unavailableAttributesToProcess);
-						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						AddIfSupportedPlatform (attribute, UnavailableAttributesToProcess);
+						ExistingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						anyAvailabilityFound = true;
 						break;
 					}
 					case "Obsoleted": {
-						AddIfSupportedPlatform (attribute, obsoleteAttributesToProcess);
-						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						AddIfSupportedPlatform (attribute, ObsoleteAttributesToProcess);
+						ExistingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						anyAvailabilityFound = true;
 						break;
 					}
 					case "NoWatch":
 					case "Watch": {
-						existingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						ExistingAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 					default:
-						nonAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
+						NonAvailabilityAttributes.Add (HarvestedAvailabilityInfo.From (attribute, attributeList));
 						break;
 					}
 				}
@@ -161,73 +224,15 @@ namespace mellite {
 
 				processingFirst = false;
 			}
+		}
 
-			// If we define any availability attributes on a member and have a parent, we must copy
-			// all non-conflicting availabilities down. This is the crux of the problem this tool is to solve.
-			bool hasAnyAvailability = introducedAttributesToProcess.Any () ||
-				deprecatedAttributesToProcess.Any () ||
-				unavailableAttributesToProcess.Any () ||
-				obsoleteAttributesToProcess.Any ();
-			if (hasAnyAvailability) {
-				List<string> fullyUnavailablePlatforms = unavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
-					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
-
-				// If we have a parent, do the full process of copy from parent + assembly probe
-				if (parent != null) {
-					// First copy down any information from the harvested assembly, if it exists
-					// We have a pickle here in ordering:
-					// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
-					//    as attributes from the generator.cs should be respected
-					// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
-					//    "override" attributes copied from the parent context.
-					// To solve this bind, we copy everything but the implied, then do parent context hoisting, then copy the implied
-					// CopyNonConflicting will do the right thing and not override/duplicate introduced
-					var impliedIntroducedAttributesToProcess = new List<AttributeSyntax> ();
-					if (assemblyInfo != null) {
-						string fullName = GetFullName (parent);
-
-						if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
-							HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
-							impliedIntroducedAttributesToProcess = assemblyParentInfo.ImpliedIntroducedAttributesToProcess.ToList ();
-							CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
-						}
-					}
-
-					// Then copy down any information from our current roslyn context
-					HarvestedMemberInfo parentInfo = AttributeHarvester.Process (parent, null, assemblyInfo);
-					CopyNonConflicting (introducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
-					CopyNonConflicting (deprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
-					CopyNonConflicting (unavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
-					CopyNonConflicting (obsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
-
-					// Then finally, copy any implied attributes, which won't prevent any parent info to be copied down, since we're last
-					CopyNonConflicting (introducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
-				} else { // Only do the assembly probing since we have no parent context to copy from
-					if (assemblyInfo != null) {
-						string fullName = GetFullName ((BaseTypeDeclarationSyntax) member);
-
-						if (assemblyInfo.Data.TryGetValue (fullName, out var assemblyData)) {
-							HarvestedMemberInfo assemblyParentInfo = ProcessAssemblyParent (assemblyData);
-							CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (introducedAttributesToProcess, assemblyParentInfo.ImpliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (deprecatedAttributesToProcess, assemblyParentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (unavailableAttributesToProcess, assemblyParentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
-							CopyNonConflicting (obsoleteAttributesToProcess, assemblyParentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
-
-						}
-					}
-				}
-			}
-
-			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
-			// as the #if define in the block is a superset of others and must come last
-			ForceiOSToEndOfList (deprecatedAttributesToProcess);
-			ForceiOSToEndOfList (obsoleteAttributesToProcess);
-
-			return new HarvestedMemberInfo (existingAvailabilityAttributes, nonAvailabilityAttributes, new List<AttributeSyntax> (), introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, nonWhitespaceTrivia, newlineTrivia, indentTrivia);
+		void CopyAvailabilityFromParent (MemberDeclarationSyntax member, MemberDeclarationSyntax parent, AssemblyHarvestInfo? assemblyInfo, List<string> fullyUnavailablePlatforms)
+		{
+			HarvestedMemberInfo parentInfo = (new AttributeHarvester ()).Process (parent, null, assemblyInfo);
+			CopyNonConflicting (IntroducedAttributesToProcess, parentInfo.IntroducedAttributesToProcess, fullyUnavailablePlatforms);
+			CopyNonConflicting (DeprecatedAttributesToProcess, parentInfo.DeprecatedAttributesToProcess, fullyUnavailablePlatforms);
+			CopyNonConflicting (UnavailableAttributesToProcess, parentInfo.UnavailableAttributesToProcess, fullyUnavailablePlatforms);
+			CopyNonConflicting (ObsoleteAttributesToProcess, parentInfo.ObsoleteAttributesToProcess, fullyUnavailablePlatforms);
 		}
 
 		public static HarvestedMemberInfo ProcessAssemblyParent (List<HarvestedAvailabilityInfo> infos)
@@ -276,29 +281,43 @@ namespace mellite {
 			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), impliedIntroducedAttributesToProcess, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null);
 		}
 
-		static string GetFullName (BaseTypeDeclarationSyntax parent)
+		// Given a member of a class or the class itself
+		// calculate the Namespace.Class or Class name
+		static string GetClassAndNamespace (MemberDeclarationSyntax type, MemberDeclarationSyntax? parent)
 		{
-			string name = parent.Identifier.ToString ();
+			string name = "";
+			switch (type) {
+			case ClassDeclarationSyntax klass:
+				name = klass.Identifier.ToString ();
+				break;
+			case StructDeclarationSyntax str:
+				name = str.Identifier.ToString ();
+				break;
+			}
 
-			SyntaxNode? current = parent.Parent;
+			SyntaxNode? current = parent ?? type.Parent;
 			while (current != null) {
 				switch (current) {
 				case NamespaceDeclarationSyntax space:
-					name = space.Name + "." + name;
+					name = AppendIdentifier (name, space.Name);
 					break;
 				case ClassDeclarationSyntax klass:
-					name = klass.Identifier.ToString () + "." + name;
+					name = AppendIdentifier (name, klass.Identifier);
 					break;
 				case StructDeclarationSyntax str:
-					name = str.Identifier.ToString () + "." + name;
+					name = AppendIdentifier (name, str.Identifier);
+					break;
+				case CompilationUnitSyntax: // Just ignore, we'll be bailing out
 					break;
 				default:
-					throw new NotImplementedException ();
+					throw new InvalidOperationException ($"GetFullName parent unexpected type: {current.GetType ()}");
 				}
-				current = current.Parent as BaseTypeDeclarationSyntax;
+				current = current.Parent;
 			}
 			return name;
 		}
+
+		static string AppendIdentifier (string current, object addition) => current.Length == 0 ? addition.ToString ()! : $"{addition.ToString ()}.{current}";
 
 		static void CopyNonConflicting (List<AttributeSyntax> destination, IEnumerable<AttributeSyntax> source, List<string> fullyUnavailablePlatforms)
 		{
