@@ -878,7 +878,6 @@ public struct AVCaptureViewControlsStyle {
 #if NET
 	[SupportedOSPlatform (""ios8.0"")]
 	[SupportedOSPlatform (""macos10.10"")]
-#else
 #endif
 	partial class NSDateComponentsFormatter {
 #if NET
@@ -906,7 +905,6 @@ public struct AVCaptureViewControlsStyle {
 #if NET
 	[SupportedOSPlatform (""maccatalyst14.0"")]
 	[UnsupportedOSPlatform (""tvos"")]
-#else
 #endif
 	public partial class AVCaptureConnection {
 #if NET
@@ -1241,7 +1239,6 @@ public static class LaunchServices
 	[SupportedOSPlatform (""maccatalyst"")]
 	[SupportedOSPlatform (""macos"")]
 	[SupportedOSPlatform (""tvos"")]
-#else
 #endif
 	public class NWTxtRecord : NativeObject {
 #if NET
@@ -1322,7 +1319,6 @@ public static class LaunchServices
 	[SupportedOSPlatform (""macos"")]
 	[SupportedOSPlatform (""maccatalyst"")]
 	[SupportedOSPlatform (""tvos"")]
-#else
 #endif
 	public class NSTextContainer {
 #if NET
@@ -1357,7 +1353,6 @@ public static class LaunchServices
 	[SupportedOSPlatform (""tvos10.2"")]
 	[SupportedOSPlatform (""maccatalyst"")]
 	[SupportedOSPlatform (""macos"")]
-#else
 #endif
 	public partial class VTCompressionProperties {
 #if NET
@@ -1388,7 +1383,6 @@ public static class LaunchServices
 	[SupportedOSPlatform (""ios11.0"")]
 	[SupportedOSPlatform (""maccatalyst"")]
 	[SupportedOSPlatform (""macos"")]
-#else
 #endif
 	public partial class PdfAnnotation {
 #if NET
@@ -1417,7 +1411,6 @@ public static class LaunchServices
 	[SupportedOSPlatform (""maccatalyst"")]
 	[SupportedOSPlatform (""macos"")]
 	[SupportedOSPlatform (""tvos"")]
-#else
 #endif
 	public partial class VTCompressionSession {
 	}
