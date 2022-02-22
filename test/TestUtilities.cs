@@ -38,7 +38,6 @@ namespace binding
 				Console.WriteLine (processedText);
 				Console.WriteLine ();
 				Console.WriteLine (expected);
-
 			}
 			Assert.Equal (expected, processedText, ignoreLineEndingDifferences: true);
 		}
