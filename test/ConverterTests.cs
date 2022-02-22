@@ -1476,6 +1476,30 @@ public static class LaunchServices
 	}
 }
 ", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+
+			TestUtilities.TestProcess (@"namespace VideoToolbox {
+	[iOS (8,0)]
+	[TV (10,2)]
+	public partial class VTCompressionSession {
+		GCHandle callbackHandle;
+	}
+}
+", @"namespace VideoToolbox {
+#if NET
+	[SupportedOSPlatform (""ios8.0"")]
+	[SupportedOSPlatform (""tvos10.2"")]
+	[SupportedOSPlatform (""maccatalyst"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+	[iOS (8,0)]
+	[TV (10,2)]
+#endif
+	public partial class VTCompressionSession {
+		GCHandle callbackHandle;
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+
 		}
 	}
 }

@@ -89,6 +89,11 @@ namespace mellite {
 		SyntaxTriviaList? NewlineTrivia = null;
 		SyntaxTriviaList? IndentTrivia = null;
 
+		bool HasAnyAvailability => IntroducedAttributesToProcess.Any () ||
+				DeprecatedAttributesToProcess.Any () ||
+				UnavailableAttributesToProcess.Any () ||
+				ObsoleteAttributesToProcess.Any ();
+
 		public HarvestedMemberInfo Process (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent, AssemblyHarvestInfo? assemblyInfo)
 		{
 			ProcessAttributesOnMember (member);
@@ -109,21 +114,23 @@ namespace mellite {
 
 			// If we define any availability attributes on a member and have a parent, we must copy
 			// all non-conflicting availabilities down. This is the crux of the problem this tool is to solve.
-			bool hasAnyAvailability = IntroducedAttributesToProcess.Any () ||
-				DeprecatedAttributesToProcess.Any () ||
-				UnavailableAttributesToProcess.Any () ||
-				ObsoleteAttributesToProcess.Any ();
-			if (hasAnyAvailability && parent != null) {
+
+			if (HasAnyAvailability && parent != null) {
 				CopyAvailabilityFromParent (member, parent, assemblyInfo, fullyUnavailablePlatforms);
 			}
 
-			// Then finally, copy any implied attributes, which won't prevent any parent info to be copied down, since we're last
-			CopyNonConflicting (IntroducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
+			// Then finally, copy any implied attributes in one of two cases:
+			//    - If we have any availability at all
+			//    - We are on a class/struct context
+			// These won't prevent any parent info to be copied down, since we're last
+			if (HasAnyAvailability || (member is ClassDeclarationSyntax || member is StructDeclarationSyntax)) {
+				CopyNonConflicting (IntroducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
 
-			// Hack - When we don't have a parent context because we're on a class that has no attributes, the indent is almost always one tab
-			// so if we don't have one set, hack that in if not set...
-			if (parent is NamespaceDeclarationSyntax && assemblyInfo != null && IndentTrivia == null) {
-				IndentTrivia = new SyntaxTriviaList (TriviaConstants.Tab);
+				// Hack - When we don't have a parent context because we're on a class that has no attributes, the indent is almost always one tab
+				// so if we don't have one set, hack that in if not set...
+				if (parent is NamespaceDeclarationSyntax && assemblyInfo != null && IndentTrivia == null) {
+					IndentTrivia = new SyntaxTriviaList (TriviaConstants.Tab);
+				}
 			}
 
 			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
