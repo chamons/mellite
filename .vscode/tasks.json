@@ -54,7 +54,7 @@
             "args": [
                 "test",
                 "${workspaceFolder}/test/mellite.tests.csproj",
-                "--filter=EnumExampleWithAssemblies",
+                "--filter=AppkitField",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
             ],

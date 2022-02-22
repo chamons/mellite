@@ -1510,5 +1510,27 @@ public static class LaunchServices
 ";
 			TestUtilities.TestProcess (testCase, testCase, new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
 		}
+
+		[Fact]
+		public void AppkitField ()
+		{
+			TestUtilities.TestProcess (@"namespace AppKit {
+	public partial class NSApplication : NSResponder {
+		public static bool CheckForIllegalCrossThreadCalls = true;
+	}
+}
+", @"namespace AppKit {
+#if NET
+	[SupportedOSPlatform (""macos"")]
+	[UnsupportedOSPlatform (""maccatalyst"")]
+#endif
+	public partial class NSApplication : NSResponder {
+		public static bool CheckForIllegalCrossThreadCalls = true;
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXM, AddDefaultIntroducedPath = SystemAssemblies });
+
+
+		}
 	}
 }

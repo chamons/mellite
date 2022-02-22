@@ -98,32 +98,28 @@ namespace mellite {
 		{
 			ProcessAttributesOnMember (member);
 
-			// Platforms that are explicitly unavailable with no version [NoiOS] should not have any attributes copied from assembly/parent
-			List<string> fullyUnavailablePlatforms = UnavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
-				.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
-
-			// First copy down any information from the harvested assembly, if it exists
-			// We have a pickle here in ordering:
-			// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
-			//    as attributes from the generator.cs should be respected
-			// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
-			//    "override" attributes copied from the parent context.
-			// To solve this bind, we copy everything but the implied, copy from the parent, then copy the implied
-			// CopyNonConflicting will do the right thing and not override/duplicate introduced
-			var impliedIntroducedAttributesToProcess = ProcessAttributeFromAssemblyInfo (member, parent, assemblyInfo, fullyUnavailablePlatforms);
-
-			// If we define any availability attributes on a member and have a parent, we must copy
-			// all non-conflicting availabilities down. This is the crux of the problem this tool is to solve.
-
-			if (HasAnyAvailability && parent != null) {
-				CopyAvailabilityFromParent (member, parent, assemblyInfo, fullyUnavailablePlatforms);
-			}
-
-			// Then finally, copy any implied attributes in one of two cases:
-			//    - If we have any availability at all
-			//    - We are on a class/struct context
-			// These won't prevent any parent info to be copied down, since we're last
+			// Don't look at assembly or parent info if we're not decorated with availability or on a struct/class
 			if (HasAnyAvailability || (member is ClassDeclarationSyntax || member is StructDeclarationSyntax)) {
+				// Platforms that are explicitly unavailable with no version [NoiOS] should not have any attributes copied from assembly/parent
+				List<string> fullyUnavailablePlatforms = UnavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
+					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
+
+				// First copy down any information from the harvested assembly, if it exists
+				// We have a pickle here in ordering:
+				// 1. We must copy attributes from the harvested assembly (if any) before copying from the parent context,
+				//    as attributes from the generator.cs should be respected
+				// 2. However, implied attributes (those created because a type exists but are not "real"), must not 
+				//    "override" attributes copied from the parent context.
+				// To solve this bind, we copy everything but the implied, copy from the parent, then copy the implied
+				// CopyNonConflicting will do the right thing and not override/duplicate introduced
+				var impliedIntroducedAttributesToProcess = ProcessAttributeFromAssemblyInfo (member, parent, assemblyInfo, fullyUnavailablePlatforms);
+
+				// If we define any availability attributes on a member and have a parent, we must copy
+				// all non-conflicting availabilities down. This is the crux of the problem this tool is to solve.
+				if (parent != null) {
+					CopyAvailabilityFromParent (member, parent, assemblyInfo, fullyUnavailablePlatforms);
+				}
+
 				CopyNonConflicting (IntroducedAttributesToProcess, impliedIntroducedAttributesToProcess, fullyUnavailablePlatforms);
 
 				// Hack - When we don't have a parent context because we're on a class that has no attributes, the indent is almost always one tab
@@ -131,12 +127,12 @@ namespace mellite {
 				if (parent is NamespaceDeclarationSyntax && assemblyInfo != null && IndentTrivia == null) {
 					IndentTrivia = new SyntaxTriviaList (TriviaConstants.Tab);
 				}
-			}
 
-			// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
-			// as the #if define in the block is a superset of others and must come last
-			ForceiOSToEndOfList (DeprecatedAttributesToProcess);
-			ForceiOSToEndOfList (ObsoleteAttributesToProcess);
+				// We must sort IOS to be the last element in deprecatedAttributesToProcess and obsoleteAttributesToProcess
+				// as the #if define in the block is a superset of others and must come last
+				ForceiOSToEndOfList (DeprecatedAttributesToProcess);
+				ForceiOSToEndOfList (ObsoleteAttributesToProcess);
+			}
 
 			return new HarvestedMemberInfo (ExistingAvailabilityAttributes, NonAvailabilityAttributes, new List<AttributeSyntax> (), IntroducedAttributesToProcess, DeprecatedAttributesToProcess, UnavailableAttributesToProcess, ObsoleteAttributesToProcess, NonWhitespaceTrivia, NewlineTrivia, IndentTrivia);
 		}
