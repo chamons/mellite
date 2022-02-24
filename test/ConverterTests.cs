@@ -1556,6 +1556,7 @@ public static class LaunchServices
 	}
 }", @"namespace AppKit {
 
+
 #if NET
 	[SupportedOSPlatform (""macos"")]
 	[UnsupportedOSPlatform (""maccatalyst"")]

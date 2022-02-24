@@ -90,6 +90,10 @@ namespace mellite {
 
 			// Only reformat attributes if we're created new attributes or have existing availability attributes wrapped in defines
 			if (createdAttributes.Any () || info.ExistingAvailabilityAttributes.Any ()) {
+				if (info.LeadingNewlinesToRemoveFromMember) {
+					member = member.WithLeadingTrivia (member.GetLeadingTrivia ().Where (t => t.Kind () != SyntaxKind.EndOfLineTrivia));
+				}
+
 				return member.WithAttributeLists (new SyntaxList<AttributeListSyntax> (GenerateFinalAttributes (info, createdAttributes)));
 			} else {
 				return member;
@@ -234,12 +238,20 @@ namespace mellite {
 				leading.AddRange (info.NewlineTrivia);
 				leading.AddRange (TriviaConstants.IfNet);
 				leading.AddRange (TriviaConstants.Newline);
+				leading.AddRange (info.IndentTrivia);
 
 				var trailing = new List<SyntaxTrivia> ();
+				trailing.AddRange (TriviaConstants.Newline);
 				trailing.AddRange (TriviaConstants.EndIf);
 				trailing.AddRange (TriviaConstants.Newline);
 
-				newLinesAdded = AddToListWithLeadingTrailing (finalAttributes, createdAttributes, leading, trailing);
+				// Unlike the other two cases, we have to cheat a bit.
+				// We don't have any existing attributes to build upon, so inject our attributes at the end of the leading
+				// trivia of the item
+				createdAttributes [0] = createdAttributes [0].WithLeadingTrivia (leading);
+				createdAttributes [createdAttributes.Count - 1] = createdAttributes [createdAttributes.Count - 1].WithTrailingTrivia (trailing);
+				finalAttributes.AddRange (createdAttributes);
+				newLinesAdded = false;
 			} else {
 				var leading = new List<SyntaxTrivia> ();
 				leading.AddRange (info.NewlineTrivia);

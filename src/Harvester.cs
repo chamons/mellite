@@ -58,7 +58,11 @@ namespace mellite {
 		public SyntaxTriviaList NewlineTrivia;
 		public SyntaxTriviaList IndentTrivia;
 
-		public HarvestedMemberInfo (List<HarvestedAvailabilityInfo> existingAvailabilityAttributes, List<HarvestedAvailabilityInfo> nonAvailabilityAttributes, List<AttributeSyntax> impliedIntroducedAttributesToProcess, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia)
+		// In cases where there is no attribute to strip, but we're creating some, remove these from the leading
+		// trivia to get the spacing correct. In other cases, we're monkeying with the first attribute but can't here
+		public bool LeadingNewlinesToRemoveFromMember;
+
+		public HarvestedMemberInfo (List<HarvestedAvailabilityInfo> existingAvailabilityAttributes, List<HarvestedAvailabilityInfo> nonAvailabilityAttributes, List<AttributeSyntax> impliedIntroducedAttributesToProcess, List<AttributeSyntax> introducedAttributesToProcess, List<AttributeSyntax> deprecatedAttributesToProcess, List<AttributeSyntax> unavailableAttributesToProcess, List<AttributeSyntax> obsoleteAttributesToProcess, SyntaxTriviaList? nonWhitespaceTrivia, SyntaxTriviaList? newlineTrivia, SyntaxTriviaList? indentTrivia, bool leadingNewlinesToRemoveFromMember)
 		{
 			ExistingAvailabilityAttributes = existingAvailabilityAttributes.AsReadOnly ();
 			NonAvailabilityAttributes = nonAvailabilityAttributes.AsReadOnly ();
@@ -72,6 +76,7 @@ namespace mellite {
 			NonWhitespaceTrivia = nonWhitespaceTrivia ?? new SyntaxTriviaList ();
 			NewlineTrivia = newlineTrivia ?? new SyntaxTriviaList ();
 			IndentTrivia = indentTrivia ?? new SyntaxTriviaList ();
+			LeadingNewlinesToRemoveFromMember = leadingNewlinesToRemoveFromMember;
 		}
 	}
 
@@ -88,6 +93,7 @@ namespace mellite {
 		SyntaxTriviaList? NonWhitespaceTrivia = null;
 		SyntaxTriviaList? NewlineTrivia = null;
 		SyntaxTriviaList? IndentTrivia = null;
+		bool LeadingNewlinesToRemoveFromMember;
 
 		bool HasAnyAvailability => IntroducedAttributesToProcess.Any () ||
 				DeprecatedAttributesToProcess.Any () ||
@@ -134,7 +140,7 @@ namespace mellite {
 				ForceiOSToEndOfList (ObsoleteAttributesToProcess);
 			}
 
-			return new HarvestedMemberInfo (ExistingAvailabilityAttributes, NonAvailabilityAttributes, new List<AttributeSyntax> (), IntroducedAttributesToProcess, DeprecatedAttributesToProcess, UnavailableAttributesToProcess, ObsoleteAttributesToProcess, NonWhitespaceTrivia, NewlineTrivia, IndentTrivia);
+			return new HarvestedMemberInfo (ExistingAvailabilityAttributes, NonAvailabilityAttributes, new List<AttributeSyntax> (), IntroducedAttributesToProcess, DeprecatedAttributesToProcess, UnavailableAttributesToProcess, ObsoleteAttributesToProcess, NonWhitespaceTrivia, NewlineTrivia, IndentTrivia, LeadingNewlinesToRemoveFromMember);
 		}
 
 		List<AttributeSyntax> ProcessAttributeFromAssemblyInfo (MemberDeclarationSyntax member, MemberDeclarationSyntax? parent, AssemblyHarvestInfo? assemblyInfo, List<string> fullyUnavailablePlatforms)
@@ -227,6 +233,14 @@ namespace mellite {
 
 				processingFirst = false;
 			}
+			// For elements with zero current attributes but will have
+			// Syntentic ones, also process whitespace
+			if (!member.AttributeLists.Any ()) {
+				var leading = member.GetLeadingTrivia ();
+				// This is not exactly right, get gets us close enough in this rare case
+				NewlineTrivia = new SyntaxTriviaList (leading.Where (x => x.Kind () == SyntaxKind.EndOfLineTrivia));
+				LeadingNewlinesToRemoveFromMember = true;
+			}
 		}
 
 		void CopyAvailabilityFromParent (MemberDeclarationSyntax member, MemberDeclarationSyntax parent, AssemblyHarvestInfo? assemblyInfo, List<string> fullyUnavailablePlatforms)
@@ -281,7 +295,7 @@ namespace mellite {
 				}
 			}
 
-			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), impliedIntroducedAttributesToProcess, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null);
+			return new HarvestedMemberInfo (new List<HarvestedAvailabilityInfo> (), new List<HarvestedAvailabilityInfo> (), impliedIntroducedAttributesToProcess, introducedAttributesToProcess, deprecatedAttributesToProcess, unavailableAttributesToProcess, obsoleteAttributesToProcess, null, null, null, false);
 		}
 
 		// Given a member of a class or the class itself
