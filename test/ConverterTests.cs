@@ -1567,7 +1567,7 @@ public static class LaunchServices
 		}
 
 		[Fact]
-		public void EnumWithAvail ()
+		public void EnumWithElementAvail ()
 		{
 			TestUtilities.TestProcess (@"namespace SystemConfiguration {
 	[Flags]
@@ -1593,6 +1593,25 @@ public static class LaunchServices
 	}
 }
 ", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
+
+		[Fact]
+		public void EnumWithAvail ()
+		{
+			TestUtilities.TestProcess (@"namespace CoreGraphics {
+	[MacCatalyst (15,0)]
+	public enum CGEventTapLocation : int {}
+}
+", @"namespace CoreGraphics {
+#if NET
+	[SupportedOSPlatform (""maccatalyst15.0"")]
+	[SupportedOSPlatform (""macos"")]
+#else
+	[MacCatalyst (15,0)]
+#endif
+	public enum CGEventTapLocation : int {}
+}
+", new ProcessOptions () { AssemblyPath = SystemXM, AddDefaultIntroducedPath = SystemAssemblies });
 		}
 	}
 }
