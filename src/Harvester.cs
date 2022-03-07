@@ -105,7 +105,7 @@ namespace mellite {
 			ProcessAttributesOnMember (member);
 
 			// Don't look at assembly or parent info if we're not decorated with availability or on a struct/class
-			if (HasAnyAvailability || (member is ClassDeclarationSyntax || member is StructDeclarationSyntax)) {
+			if (HasAnyAvailability || (member is ClassDeclarationSyntax || member is StructDeclarationSyntax || member is EnumDeclarationSyntax)) {
 				// Platforms that are explicitly unavailable with no version [NoiOS] should not have any attributes copied from assembly/parent
 				List<string> fullyUnavailablePlatforms = UnavailableAttributesToProcess.Where (u => PlatformArgumentParser.GetVersionFromNode (u) == "" && PlatformArgumentParser.GetPlatformFromNode (u) != null)
 					.Select (u => PlatformArgumentParser.GetPlatformFromNode (u)!).ToList ();
@@ -309,6 +309,9 @@ namespace mellite {
 				break;
 			case StructDeclarationSyntax str:
 				name = str.Identifier.ToString ();
+				break;
+			case EnumDeclarationSyntax e:
+				name = e.Identifier.ToString ();
 				break;
 			}
 

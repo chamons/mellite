@@ -1565,5 +1565,34 @@ public static class LaunchServices
 	}
 }", new ProcessOptions () { AssemblyPath = SystemXM, AddDefaultIntroducedPath = SystemAssemblies });
 		}
+
+		[Fact]
+		public void EnumWithAvail ()
+		{
+			TestUtilities.TestProcess (@"namespace SystemConfiguration {
+	[Flags]
+	public enum NetworkReachabilityFlags {
+		IsDirect = 1<<17,
+		[Unavailable (PlatformName.MacOSX)]
+		IsWWAN = 1<<18,
+	}
+}
+", @"namespace SystemConfiguration {
+	[Flags]
+	public enum NetworkReachabilityFlags {
+		IsDirect = 1<<17,
+#if NET
+		[SupportedOSPlatform (""ios"")]
+		[SupportedOSPlatform (""maccatalyst"")]
+		[SupportedOSPlatform (""tvos"")]
+		[UnsupportedOSPlatform (""macos"")]
+#else
+		[Unavailable (PlatformName.MacOSX)]
+#endif
+		IsWWAN = 1<<18,
+	}
+}
+", new ProcessOptions () { AssemblyPath = SystemXI, AddDefaultIntroducedPath = SystemAssemblies });
+		}
 	}
 }
